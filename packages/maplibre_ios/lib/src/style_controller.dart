@@ -1,5 +1,62 @@
 part of 'map_state.dart';
 
+/// `MLNDEMEncoding` — the raw enum values, because the header's `NS_ENUM` is not part
+/// of the generated bindings. `MLNDEMEncodingMapbox = 0`, `MLNDEMEncodingTerrarium = 1`.
+const int _mlnDemEncodingMapbox = 0;
+const int _mlnDemEncodingTerrarium = 1;
+
+/// The `MLNTileSourceOption` dictionary that
+/// `-initWithIdentifier:tileURLTemplates:options:` expects.
+///
+/// Without it the native source silently falls back to its own defaults — zoom range
+/// 0–22, tile size 512, no attribution — and everything the [Source] declared is
+/// dropped. The zoom range is the one that changes what the map draws: a source whose
+/// data stops at [maxZoom] is meant to OVERSCALE beyond it, and with the option missing
+/// MapLibre keeps requesting deeper tiles that do not exist, so the layer can stop
+/// drawing past its own maxzoom instead of stretching. The Android implementation has
+/// always passed these through a `TileSet`, so this is also an iOS/Android divergence.
+///
+/// `MLNTileSourceOptionCoordinateBounds` is deliberately absent. It takes an `NSValue`
+/// wrapping an `MLNCoordinateBounds`, and neither `+valueWithMLNCoordinateBounds:` nor
+/// `+valueWithBytes:objCType:` is part of the generated bindings — adding it means
+/// extending the ffigen config, which is a much larger change than this one. Bounds are
+/// a request-count optimisation rather than a correctness property: a source without
+/// them asks for tiles outside its extent and the server answers empty.
+NSDictionary _tileSourceOptions({
+  required double minZoom,
+  required double maxZoom,
+  int? tileSize,
+  String? attribution,
+  int? demEncoding,
+}) {
+  final options = NSMutableDictionary.new$()..init();
+  void put(String key, ObjCObject value) =>
+      options.setObject(value, forKey: NSCopying.as(key.toNSString()));
+
+  // Passed as the doubles they are: MapLibre reads them with `integerValue`, so the
+  // truncation is the platform's own and not a rounding policy invented here.
+  //
+  // Both or neither. MapLibre raises "MLNTileSourceOptionMinimumZoomLevel must be less
+  // than MLNTileSourceOptionMaximumZoomLevel" when they cross, and a degenerate range is
+  // legal on the Dart side today — it was simply being discarded. Sending it now would
+  // turn a silently ignored value into a crash, so a range that cannot be expressed
+  // falls back to the native defaults, exactly as before this change.
+  if (minZoom < maxZoom) {
+    put('MLNTileSourceOptionMinimumZoomLevel', minZoom.toNSNumber());
+    put('MLNTileSourceOptionMaximumZoomLevel', maxZoom.toNSNumber());
+  }
+  if (tileSize != null) {
+    put('MLNTileSourceOptionTileSize', tileSize.toNSNumber());
+  }
+  if (attribution != null) {
+    put('MLNTileSourceOptionAttributionHTMLString', attribution.toNSString());
+  }
+  if (demEncoding != null) {
+    put('MLNTileSourceOptionDEMEncoding', demEncoding.toNSNumber());
+  }
+  return options;
+}
+
 /// iOS specific implementation of the [StyleController].
 class StyleControllerIos extends StyleController {
   StyleControllerIos._(this._ffiStyle);
@@ -167,7 +224,20 @@ class StyleControllerIos extends StyleController {
           demSource.initWithIdentifier$3(
             ffiId,
             tileURLTemplates: ffiUrls,
-            options: NSDictionary.new$(),
+            options: _tileSourceOptions(
+              minZoom: source.minZoom,
+              maxZoom: source.maxZoom,
+              tileSize: source.tileSize,
+              attribution: source.attribution,
+              demEncoding: switch (source.encoding) {
+                RasterDemTerrariumEncoding() => _mlnDemEncodingTerrarium,
+                // `custom` has no iOS representation: MapLibre Native implements only
+                // the two named encodings, so redFactor/greenFactor/blueFactor/baseShift
+                // have nowhere to go. Falling back to Mapbox matches the native default
+                // rather than inventing a decode the engine cannot perform.
+                _ => _mlnDemEncodingMapbox,
+              },
+            ),
           );
         }
       case RasterSource():
@@ -186,7 +256,12 @@ class StyleControllerIos extends StyleController {
           rasterSource.initWithIdentifier$3(
             ffiId,
             tileURLTemplates: ffiUrls,
-            options: NSDictionary.new$(),
+            options: _tileSourceOptions(
+              minZoom: source.minZoom,
+              maxZoom: source.maxZoom,
+              tileSize: source.tileSize,
+              attribution: source.attribution,
+            ),
           );
         }
       case VectorSource():
@@ -204,7 +279,11 @@ class StyleControllerIos extends StyleController {
           vectorSource.initWithIdentifier$3(
             ffiId,
             tileURLTemplates: ffiUrls,
-            options: NSDictionary.new$(),
+            options: _tileSourceOptions(
+              minZoom: source.minZoom,
+              maxZoom: source.maxZoom,
+              attribution: source.attribution,
+            ),
           );
         }
       case ImageSource():
