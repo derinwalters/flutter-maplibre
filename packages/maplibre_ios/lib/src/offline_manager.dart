@@ -61,7 +61,6 @@ class OfflineManagerIos implements OfflineManager {
     required double maxZoom,
     required double pixelDensity,
     Map<String, Object?> metadata = const {},
-    bool includeIdeographs = true,
   }) async* {
     final ffiRegion = Helpers.createTilePyramidOfflineRegionWithStyleURL(
       mapStyleUrl.toNSURL(),
@@ -72,9 +71,6 @@ class OfflineManagerIos implements OfflineManager {
       west: bounds.longitudeWest,
       south: bounds.latitudeSouth,
     );
-    // Set before the pack is added: MLNOfflineStorage copies the region when
-    // it creates the pack, so a later write would not reach the download.
-    ffiRegion.includesIdeographicGlyphs = includeIdeographs;
     final id = DateTime.now().microsecondsSinceEpoch.hashCode;
     final context = _PackContext.fromJson(
       id: id,
