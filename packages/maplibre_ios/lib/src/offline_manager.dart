@@ -116,6 +116,44 @@ class OfflineManagerIos implements OfflineManager {
   }
 
   @override
+  Stream<DownloadProgress> resumeRegion({required int regionId}) async* {
+    final packs = await _getPacks();
+    for (var i = 0; i < packs.length; i++) {
+      final ffiPack = MLNOfflinePack.as(packs[i]);
+      final context = _PackContext.fromNSData(ffiPack.context);
+      if (context.id != regionId) continue;
+      final ffiRegion = MLNTilePyramidOfflineRegion.as(ffiPack.region);
+      final region = OfflineRegion(
+        id: regionId,
+        bounds: ffiRegion.bounds.toLngLatBounds(),
+        minZoom: ffiRegion.minimumZoomLevel,
+        maxZoom: ffiRegion.maximumZoomLevel,
+        pixelRatio: context.pixelDensity,
+        styleUrl: context.styleUrl,
+        metadata: context.metadata,
+      );
+      // Registering the controller is what re-attaches progress: the
+      // class-level listener routes notifications by context id and applies
+      // downloadRegion's terminal conditions (close on completion, error on
+      // notification error).
+      final streamCtrl = StreamController<DownloadProgress>();
+      _downloadStreamControllers[regionId] = streamCtrl;
+      ffiPack.resume();
+      final progress = ffiPack.toDownloadProgress(region);
+      streamCtrl.add(progress);
+      if (progress.downloadCompleted) {
+        // Already complete: no further notification will arrive, so apply the
+        // terminal condition here rather than waiting forever.
+        _downloadStreamControllers.remove(regionId);
+        await streamCtrl.close();
+      }
+      yield* streamCtrl.stream;
+      return;
+    }
+    throw StateError('offline region $regionId not found');
+  }
+
+  @override
   Future<OfflineRegion> getOfflineRegion({required int regionId}) async {
     final packs = await _getPacks();
     for (var i = 0; i < packs.length; i++) {

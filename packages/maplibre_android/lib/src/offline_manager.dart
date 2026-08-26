@@ -169,6 +169,19 @@ class OfflineManagerAndroid implements OfflineManager {
     );
     return stream.stream;
   });
+
+  @override
+  Stream<DownloadProgress> resumeRegion({required int regionId}) =>
+      using((arena) {
+        final stream = StreamController<DownloadProgress>();
+        _jManager.getOfflineRegion(
+          regionId,
+          jni.OfflineManager$GetOfflineRegionCallback.implement(
+            _ResumeOfflineRegionCallback(stream, regionId, arena),
+          ),
+        );
+        return stream.stream;
+      });
 }
 
 final class _MergeOfflineRegionsCallback
@@ -381,6 +394,47 @@ final class _CreateOfflineRegionCallback
 
   @override
   bool get onError$async => true;
+}
+
+/// Re-attaches progress reporting to an EXISTING region and re-activates its
+/// download — [OfflineManagerAndroid.resumeRegion]'s callback. Mirrors
+/// [_CreateOfflineRegionCallback] from `onCreate` onward; the only difference
+/// is that the region is looked up instead of created.
+final class _ResumeOfflineRegionCallback
+    with jni.$OfflineManager$GetOfflineRegionCallback {
+  const _ResumeOfflineRegionCallback(this.stream, this.regionId, this.arena);
+
+  final StreamController<DownloadProgress> stream;
+  final int regionId;
+  final Arena arena;
+
+  @override
+  void onError(JString error) => stream.addError(
+    Exception(error.toDartString(releaseOriginal: true)),
+  );
+
+  @override
+  void onRegion(jni.OfflineRegion jRegion) {
+    jRegion.releasedBy(arena);
+    final jObserver = jni.OfflineRegion$OfflineRegionObserver.implement(
+      _OfflineRegionObserver(stream, WeakReference(jRegion), arena),
+    )..releasedBy(arena);
+    jRegion.observer = jObserver;
+    jRegion.downloadState = jni.OfflineRegion.STATE_ACTIVE;
+  }
+
+  @override
+  void onRegionNotFound() =>
+      stream.addError(StateError('offline region $regionId not found'));
+
+  @override
+  bool get onError$async => true;
+
+  @override
+  bool get onRegion$async => true;
+
+  @override
+  bool get onRegionNotFound$async => true;
 }
 
 final class _OfflineRegionObserver

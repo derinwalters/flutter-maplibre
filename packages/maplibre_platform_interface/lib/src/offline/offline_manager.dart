@@ -68,4 +68,11 @@ abstract interface class OfflineManager {
     required double pixelDensity,
     Map<String, Object?> metadata = const {},
   });
+
+  /// Resume downloading an existing (incomplete) offline region by its id.
+  ///
+  /// The returned stream mirrors [downloadRegion]'s: it emits progress until the
+  /// region completes or errors, then closes. Throws if no region with
+  /// [regionId] exists.
+  Stream<DownloadProgress> resumeRegion({required int regionId});
 }
