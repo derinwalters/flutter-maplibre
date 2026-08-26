@@ -220,6 +220,14 @@ final class MapLibreMapStateAndroid extends MapLibreMapState
       ..quickZoomGesturesEnabled(options.gestures.zoom)
       ..tiltGesturesEnabled(options.gestures.pitch)
       ..camera(cameraBuilder.build()..releasedBy(arena));
+    if (options.androidLocalIdeographFontFamily case final String family) {
+      // Returns a fresh options handle rather than mutating in place, so the
+      // return value needs releasing too; `jMapOptions` is the receiver and
+      // stays the object handed to MapView.
+      jMapOptions
+          .localIdeographFontFamily(family.toJString()..releasedBy(arena))
+          .releasedBy(arena);
+    }
     _mapView = jni.MapView.new$4(jContext, jMapOptions)
       ..getMapAsync(
         jni.OnMapReadyCallback.implement(_MapReadyCallback(_onMapReady)),

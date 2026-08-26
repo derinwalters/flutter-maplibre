@@ -60,6 +60,19 @@ abstract interface class OfflineManager {
   void runPackDatabaseAutomatically({required bool enabled});
 
   /// Downloads a map region.
+  ///
+  /// Set [includeIdeographs] to false to leave CJK ideographs, kana and Hangul
+  /// out of the pack's font data. They are the majority of a pack's glyph
+  /// bytes — a style with several fontstacks can spend tens of megabytes on
+  /// them — and a renderer told to draw ideographs from locally installed
+  /// fonts never reads them. Configure that with `MLNIdeographicFontFamilyName`
+  /// (iOS) or `localIdeographFontFamily` (Android); without it, CJK labels in
+  /// the region render blank.
+  ///
+  /// Non-ideographic scripts (Arabic, Thai, Devanagari, …) are unaffected and
+  /// stay in the pack either way.
+  ///
+  /// Defaults to true, which is the underlying SDKs' own default.
   Stream<DownloadProgress> downloadRegion({
     required String mapStyleUrl,
     required LngLatBounds bounds,
@@ -67,6 +80,7 @@ abstract interface class OfflineManager {
     required double maxZoom,
     required double pixelDensity,
     Map<String, Object?> metadata = const {},
+    bool includeIdeographs = true,
   });
 
   /// Resume downloading an existing (incomplete) offline region by its id.
