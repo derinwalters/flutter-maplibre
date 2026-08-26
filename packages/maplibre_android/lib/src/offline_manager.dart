@@ -147,14 +147,18 @@ class OfflineManagerAndroid implements OfflineManager {
     required double maxZoom,
     required double pixelDensity,
     Map<String, Object?> metadata = const {},
+    bool includeIdeographs = true,
   }) => using((arena) {
     final stream = StreamController<DownloadProgress>();
-    final jDefinition = jni.OfflineTilePyramidRegionDefinition(
+    // The 6-arg overload is the only one that carries includeIdeographs; the
+    // 5-arg one this used to call hard-codes it to true.
+    final jDefinition = jni.OfflineTilePyramidRegionDefinition.new$1(
       mapStyleUrl.toJString()..releasedBy(arena),
       bounds.toJLatLngBounds(arena: arena),
       minZoom,
       maxZoom,
       pixelDensity,
+      includeIdeographs,
     );
 
     // convert the Map to a Java byte Array

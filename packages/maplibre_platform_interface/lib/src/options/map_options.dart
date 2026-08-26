@@ -29,6 +29,7 @@ class MapOptions {
     this.androidMode = AndroidPlatformViewMode.tlhc_vd,
     this.androidTranslucentTextureSurface = false,
     this.androidForegroundLoadColor = Colors.transparent,
+    this.androidLocalIdeographFontFamily,
     this.webviewDebugMode = false,
   }) : initPitch = pitch ?? initPitch;
 
@@ -109,6 +110,19 @@ class MapOptions {
 
   /// The MapView foreground color that is used when the map surface is being created.
   final Color androidForegroundLoadColor;
+
+  /// Draw CJK ideographs, kana and Hangul with a locally installed font family
+  /// (e.g. `'sans-serif'`, `'Noto Sans CJK JP'`) instead of glyphs fetched from
+  /// the style's font server.
+  ///
+  /// Ideographs are the bulk of a style's glyph data, so this cuts both network
+  /// traffic and — with `downloadRegion(includeIdeographs: false)` — the size of
+  /// an offline pack. Only these scripts are drawn locally; every other script
+  /// still comes from the font server.
+  ///
+  /// Null (the default) keeps MapLibre's own behaviour of downloading them.
+  /// The iOS equivalent is the `MLNIdeographicFontFamilyName` Info.plist key.
+  final String? androidLocalIdeographFontFamily;
 
   /// Enable webview debug mode. This enables additional logging if the map is
   /// rendered using a webview. Also, it allows to show the webview devtools
