@@ -201,10 +201,30 @@ class StyleControllerAndroid extends StyleController {
         // TODO apply other properties
         jSource.volatile = (source.volatile.toJBoolean()..releasedBy(arena));
       case VectorSource():
-        jSource = jni.VectorSource.new$3(
-          jId,
-          source.url!.toJString()..releasedBy(arena),
-        );
+        if (source.url case final String url) {
+          jSource = jni.VectorSource.new$3(
+            jId,
+            url.toJString()..releasedBy(arena),
+          );
+        } else {
+          // A source declared by its tile templates goes through a TileSet,
+          // as the RasterSource branch above does, and carries its zoom range:
+          // without maxZoom the native source requests tiles past the deepest
+          // zoom the server holds instead of overscaling that zoom's tiles.
+          final tiles = source.tiles!.map(
+            (e) => e.toJString()..releasedBy(arena),
+          );
+          final tilesArray = JArray.of(JString.type, tiles)..releasedBy(arena);
+          final tileSet =
+              jni.TileSet(
+                  '{}'.toJString()..releasedBy(arena),
+                  tilesArray.as(JArray.type(JString.type))..releasedBy(arena),
+                )
+                ..releasedBy(arena)
+                ..maxZoom = source.maxZoom.toJFloat()
+                ..minZoom = source.minZoom.toJFloat();
+          jSource = jni.VectorSource.new$4(jId, tileSet);
+        }
         // TODO apply other properties
         jSource.volatile = (source.volatile.toJBoolean()..releasedBy(arena));
       case ImageSource():
