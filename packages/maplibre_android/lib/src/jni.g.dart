@@ -29090,6 +29090,170 @@ final class $MapLibreRegistry$Type$ extends jni$_.JType<MapLibreRegistry> {
   String get signature => r'Lcom/github/josxha/maplibre/MapLibreRegistry;';
 }
 
+/// from: `com.github.josxha.maplibre.NetworkCookies`
+extension type NetworkCookies._(jni$_.JObject _$this)
+    implements jni$_.JObject, CookieJar {
+  static final _class = jni$_.JClass.forName(
+    r'com/github/josxha/maplibre/NetworkCookies',
+  );
+
+  /// The type which includes information such as the signature of this class.
+  static const jni$_.JType<NetworkCookies> type = $NetworkCookies$Type$();
+  static final _id_INSTANCE = _class.staticFieldId(
+    r'INSTANCE',
+    r'Lcom/github/josxha/maplibre/NetworkCookies;',
+  );
+
+  /// from: `static public final com.github.josxha.maplibre.NetworkCookies INSTANCE`
+  /// The returned object must be released after use, by calling the [release] method.
+  static NetworkCookies get INSTANCE =>
+      _id_INSTANCE.get(_class, NetworkCookies.type) as NetworkCookies;
+
+  static final _id_set = _class.staticMethodId(
+    r'set',
+    r'(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;J)V',
+  );
+
+  static final _set =
+      jni$_.ProtectedJniExtensions.lookup<
+            jni$_.NativeFunction<
+              jni$_.JThrowablePtr Function(
+                jni$_.Pointer<jni$_.Void>,
+                jni$_.JMethodIDPtr,
+                jni$_.VarArgs<
+                  (
+                    jni$_.Pointer<jni$_.Void>,
+                    jni$_.Pointer<jni$_.Void>,
+                    jni$_.Pointer<jni$_.Void>,
+                    jni$_.Pointer<jni$_.Void>,
+                    jni$_.Int64,
+                  )
+                >,
+              )
+            >
+          >('globalEnv_CallStaticVoidMethod')
+          .asFunction<
+            jni$_.JThrowablePtr Function(
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.JMethodIDPtr,
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.Pointer<jni$_.Void>,
+              core$_.int,
+            )
+          >();
+
+  /// from: `public fun set(host: kotlin.String, path: kotlin.String, name: kotlin.String, value: kotlin.String, expiresAt: kotlin.Long): kotlin.Unit`
+  static void set(
+    jni$_.JString string,
+    jni$_.JString string1,
+    jni$_.JString string2,
+    jni$_.JString string3,
+    core$_.int j,
+  ) {
+    final _$$classRef = _class.reference;
+    final _$string = string.reference;
+    final _$string1 = string1.reference;
+    final _$string2 = string2.reference;
+    final _$string3 = string3.reference;
+    _set(
+      _$$classRef.pointer,
+      _id_set.pointer,
+      _$string.pointer,
+      _$string1.pointer,
+      _$string2.pointer,
+      _$string3.pointer,
+      j,
+    ).check();
+  }
+}
+
+extension NetworkCookies$$Methods on NetworkCookies {
+  static final _id_loadForRequest = NetworkCookies._class.instanceMethodId(
+    r'loadForRequest',
+    r'(Lokhttp3/HttpUrl;)Ljava/util/List;',
+  );
+
+  static final _loadForRequest =
+      jni$_.ProtectedJniExtensions.lookup<
+            jni$_.NativeFunction<
+              jni$_.JniResult Function(
+                jni$_.Pointer<jni$_.Void>,
+                jni$_.JMethodIDPtr,
+                jni$_.VarArgs<(jni$_.Pointer<jni$_.Void>,)>,
+              )
+            >
+          >('globalEnv_CallObjectMethod')
+          .asFunction<
+            jni$_.JniResult Function(
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.JMethodIDPtr,
+              jni$_.Pointer<jni$_.Void>,
+            )
+          >();
+
+  /// from: `public fun loadForRequest(url: okhttp3.HttpUrl): kotlin.collections.List<okhttp3.Cookie>`
+  /// The returned object must be released after use, by calling the [release] method.
+  jni$_.JList<Cookie> loadForRequest(HttpUrl httpUrl) {
+    final _$$selfRef = reference;
+    final _$httpUrl = httpUrl.reference;
+    return _loadForRequest(
+      _$$selfRef.pointer,
+      _id_loadForRequest.pointer,
+      _$httpUrl.pointer,
+    ).object<jni$_.JList<Cookie>>();
+  }
+
+  static final _id_saveFromResponse = NetworkCookies._class.instanceMethodId(
+    r'saveFromResponse',
+    r'(Lokhttp3/HttpUrl;Ljava/util/List;)V',
+  );
+
+  static final _saveFromResponse =
+      jni$_.ProtectedJniExtensions.lookup<
+            jni$_.NativeFunction<
+              jni$_.JThrowablePtr Function(
+                jni$_.Pointer<jni$_.Void>,
+                jni$_.JMethodIDPtr,
+                jni$_.VarArgs<
+                  (jni$_.Pointer<jni$_.Void>, jni$_.Pointer<jni$_.Void>)
+                >,
+              )
+            >
+          >('globalEnv_CallVoidMethod')
+          .asFunction<
+            jni$_.JThrowablePtr Function(
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.JMethodIDPtr,
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.Pointer<jni$_.Void>,
+            )
+          >();
+
+  /// from: `public fun saveFromResponse(url: okhttp3.HttpUrl, cookies: kotlin.collections.List<okhttp3.Cookie>): kotlin.Unit`
+  void saveFromResponse(HttpUrl httpUrl, jni$_.JList<Cookie> list) {
+    final _$$selfRef = reference;
+    final _$httpUrl = httpUrl.reference;
+    final _$list = list.reference;
+    _saveFromResponse(
+      _$$selfRef.pointer,
+      _id_saveFromResponse.pointer,
+      _$httpUrl.pointer,
+      _$list.pointer,
+    ).check();
+  }
+}
+
+final class $NetworkCookies$Type$ extends jni$_.JType<NetworkCookies> {
+  @jni$_.internal
+  const $NetworkCookies$Type$();
+
+  @jni$_.internal
+  @core$_.override
+  String get signature => r'Lcom/github/josxha/maplibre/NetworkCookies;';
+}
+
 /// from: `java.net.URI`
 extension type URI._(jni$_.JObject _$this)
     implements jni$_.JObject, Comparable, Serializable {
@@ -139256,6 +139420,60 @@ final class $LayoutAnimationController$$AnimationParameters$Type$
   @core$_.override
   String get signature =>
       r'Landroid/view/animation/LayoutAnimationController$AnimationParameters;';
+}
+
+/// from: `okhttp3.Cookie`
+///
+/// WARNING: Cookie is a stub. To generate bindings for this class, include
+/// okhttp3.Cookie in your config's classes list.
+///
+extension type Cookie._(jni$_.JObject _$this) implements jni$_.JObject {
+  static const jni$_.JType<Cookie> type = $Cookie$Type$();
+}
+
+final class $Cookie$Type$ extends jni$_.JType<Cookie> {
+  @jni$_.internal
+  const $Cookie$Type$();
+
+  @jni$_.internal
+  @core$_.override
+  String get signature => r'Lokhttp3/Cookie;';
+}
+
+/// from: `okhttp3.HttpUrl`
+///
+/// WARNING: HttpUrl is a stub. To generate bindings for this class, include
+/// okhttp3.HttpUrl in your config's classes list.
+///
+extension type HttpUrl._(jni$_.JObject _$this) implements jni$_.JObject {
+  static const jni$_.JType<HttpUrl> type = $HttpUrl$Type$();
+}
+
+final class $HttpUrl$Type$ extends jni$_.JType<HttpUrl> {
+  @jni$_.internal
+  const $HttpUrl$Type$();
+
+  @jni$_.internal
+  @core$_.override
+  String get signature => r'Lokhttp3/HttpUrl;';
+}
+
+/// from: `okhttp3.CookieJar`
+///
+/// WARNING: CookieJar is a stub. To generate bindings for this class, include
+/// okhttp3.CookieJar in your config's classes list.
+///
+extension type CookieJar._(jni$_.JObject _$this) implements jni$_.JObject {
+  static const jni$_.JType<CookieJar> type = $CookieJar$Type$();
+}
+
+final class $CookieJar$Type$ extends jni$_.JType<CookieJar> {
+  @jni$_.internal
+  const $CookieJar$Type$();
+
+  @jni$_.internal
+  @core$_.override
+  String get signature => r'Lokhttp3/CookieJar;';
 }
 
 /// from: `java.lang.Comparable`

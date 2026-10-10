@@ -1022,6 +1022,23 @@ final _$$ref = callbacks.ref;_objc_msgSend_xtuoz7(_class_Helpers, _sel_removeOff
   }
 
 
+  /// Sets the cookie <code>name</code>=<code>value</code> on every request MapLibre makes over
+/// https to <code>host</code> alone for a path under <code>path</code>, until <code>expires</code>; one
+/// whose <code>expires</code> has passed removes it. MapLibre’s sessions are built
+/// from its network configuration, whose cookie storage (the app’s shared
+/// one by default) they read on every request, live maps and offline
+/// downloads alike. Returns false when that configuration has no cookie
+/// storage, so no MapLibre request can carry a cookie.
+  static bool setNetworkCookieWithHost(objc.NSString host, {required objc.NSString path,required objc.NSString name,required objc.NSString value,required objc.NSDate expires}) {
+final _$$ref = host.ref;  
+final _$$ref$1 = path.ref;  
+final _$$ref$2 = name.ref;  
+final _$$ref$3 = value.ref;  
+final _$$ref$4 = expires.ref;    return _objc_msgSend_1fpnlp1(_class_Helpers, _sel_setNetworkCookieWithHost_path_name_value_expires_, _$$ref.pointer, _$$ref$1.pointer, _$$ref$2.pointer, _$$ref$3.pointer, _$$ref$4.pointer);
+
+  }
+
+
   /// setValueWithTarget:field:value:
   static void setValueWithTarget(objc.NSObject target, {required objc.NSString field,required objc.NSObject value}) {
 final _$$ref = target.ref;  
@@ -32302,6 +32319,7 @@ final _objc_msgSend_1f04296 = objc.msgSendPointer.cast<ffi.NativeFunction<ffi.Bo
 final _objc_msgSend_1f4zv7b = objc.msgSendPointer.cast<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , ffi.Pointer<objc.ObjCObjectImpl> , UIEdgeInsets , ffi.Bool )>>().asFunction<void Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , ffi.Pointer<objc.ObjCObjectImpl> , UIEdgeInsets , bool )>();
 final _objc_msgSend_1f65wix = objc.msgSendPointer.cast<ffi.NativeFunction<MLNCoordinateBounds Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , objc.CGRect , ffi.Pointer<objc.ObjCObjectImpl> )>>().asFunction<MLNCoordinateBounds Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , objc.CGRect , ffi.Pointer<objc.ObjCObjectImpl> )>();
 final _objc_msgSend_1f65wixStret = objc.msgSendStretPointer.cast<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<MLNCoordinateBounds> , ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , objc.CGRect , ffi.Pointer<objc.ObjCObjectImpl> )>>().asFunction<void Function(ffi.Pointer<MLNCoordinateBounds> , ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , objc.CGRect , ffi.Pointer<objc.ObjCObjectImpl> )>();
+final _objc_msgSend_1fpnlp1 = objc.msgSendPointer.cast<ffi.NativeFunction<ffi.Bool Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCObjectImpl> )>>().asFunction<bool Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCObjectImpl> )>();
 final _objc_msgSend_1g8fos5 = objc.msgSendPointer.cast<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , UIEdgeInsets )>>().asFunction<void Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , UIEdgeInsets )>();
 final _objc_msgSend_1ggt4c3 = objc.msgSendPointer.cast<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , objc.CGRect , ffi.Int32 , ffi.Double )>>().asFunction<void Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> , objc.CGRect , int , double )>();
 final _objc_msgSend_1hz7y9r = objc.msgSendPointer.cast<ffi.NativeFunction<ffi.Long Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> )>>().asFunction<int Function(ffi.Pointer<objc.ObjCObjectImpl> , ffi.Pointer<objc.ObjCSelector> )>();
@@ -33330,6 +33348,7 @@ late final _sel_setMinimumRasterBrightnessTransition_ = objc.registerName("setMi
 late final _sel_setMinimumRasterBrightness_ = objc.registerName("setMinimumRasterBrightness:");
 late final _sel_setMinimumZoomLevel_ = objc.registerName("setMinimumZoomLevel:");
 late final _sel_setNeedsFocusUpdate = objc.registerName("setNeedsFocusUpdate");
+late final _sel_setNetworkCookieWithHost_path_name_value_expires_ = objc.registerName("setNetworkCookieWithHost:path:name:value:expires:");
 late final _sel_setOverscanCompensation_ = objc.registerName("setOverscanCompensation:");
 late final _sel_setPanScrollingMode_ = objc.registerName("setPanScrollingMode:");
 late final _sel_setPerformsPlacementTransitions_ = objc.registerName("setPerformsPlacementTransitions:");

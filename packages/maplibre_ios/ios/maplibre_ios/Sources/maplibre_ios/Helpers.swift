@@ -114,6 +114,39 @@ public class Helpers: NSObject {
     @objc public static func zoomLevelToAltitude(zoomLevel: Double, pitch: CGFloat, latitude: Double, size: CGSize) -> Double {
         MLNAltitudeForZoomLevel(zoomLevel, pitch, latitude, size)
     }
+
+    /// Sets the cookie `name`=`value` on every request MapLibre makes over
+    /// https to `host` alone for a path under `path`, until `expires`; one
+    /// whose `expires` has passed removes it. MapLibre's sessions are built
+    /// from its network configuration, whose cookie storage (the app's shared
+    /// one by default) they read on every request, live maps and offline
+    /// downloads alike. Returns false when that configuration has no cookie
+    /// storage, so no MapLibre request can carry a cookie.
+    @objc public static func setNetworkCookie(host: String, path: String, name: String, value: String, expires: Date) -> Bool {
+        guard let storage = MLNNetworkConfiguration.sharedManager.sessionConfiguration.httpCookieStorage else {
+            return false
+        }
+        if expires <= Date() {
+            for cookie in storage.cookies ?? [] where cookie.domain == host && cookie.path == path && cookie.name == name {
+                storage.deleteCookie(cookie)
+            }
+            return true
+        }
+        // A domain without a leading dot makes a host-only cookie, and
+        // setCookie replaces one with the same name, domain and path.
+        guard let cookie = HTTPCookie(properties: [
+            .domain: host,
+            .path: path,
+            .name: name,
+            .value: value,
+            .secure: "TRUE",
+            .expires: expires,
+        ]) else {
+            return false
+        }
+        storage.setCookie(cookie)
+        return true
+    }
 }
 
 @objc(OfflinePackProgressCallbacks)

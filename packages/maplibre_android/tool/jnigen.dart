@@ -34,6 +34,7 @@ void main(List<String> args) {
         'com.github.josxha.maplibre.FlutterApi',
         // 'com.github.josxha.maplibre.Helpers',
         'com.github.josxha.maplibre.MapLibreRegistry',
+        'com.github.josxha.maplibre.NetworkCookies',
         'java.net.URI',
         'java.net.URL',
         'io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding',

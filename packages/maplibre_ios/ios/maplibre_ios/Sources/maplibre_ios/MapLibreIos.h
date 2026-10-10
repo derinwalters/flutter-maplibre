@@ -333,6 +333,14 @@ SWIFT_CLASS_NAMED("Helpers")
 + (void)removeOfflinePackProgressListenerWithCallbacks:(id <OfflinePackProgressCallbacks> _Nonnull)callbacks;
 + (MLNTilePyramidOfflineRegion * _Nonnull)createTilePyramidOfflineRegionWithStyleURL:(NSURL * _Nullable)styleURL south:(double)south west:(double)west east:(double)east north:(double)north fromZoomLevel:(double)minZoom toZoomLevel:(double)maxZoom SWIFT_WARN_UNUSED_RESULT;
 + (double)zoomLevelToAltitudeWithZoomLevel:(double)zoomLevel pitch:(CGFloat)pitch latitude:(double)latitude size:(CGSize)size SWIFT_WARN_UNUSED_RESULT;
+/// Sets the cookie <code>name</code>=<code>value</code> on every request MapLibre makes over
+/// https to <code>host</code> alone for a path under <code>path</code>, until <code>expires</code>; one
+/// whose <code>expires</code> has passed removes it. MapLibre’s sessions are built
+/// from its network configuration, whose cookie storage (the app’s shared
+/// one by default) they read on every request, live maps and offline
+/// downloads alike. Returns false when that configuration has no cookie
+/// storage, so no MapLibre request can carry a cookie.
++ (BOOL)setNetworkCookieWithHost:(NSString * _Nonnull)host path:(NSString * _Nonnull)path name:(NSString * _Nonnull)name value:(NSString * _Nonnull)value expires:(NSDate * _Nonnull)expires SWIFT_WARN_UNUSED_RESULT;
 - (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
 @end
 

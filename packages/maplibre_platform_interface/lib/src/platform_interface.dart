@@ -40,8 +40,22 @@ abstract class MapLibrePlatform extends PlatformInterface {
     'MapLibre PermissionManager is not supported on this platform.',
   );
 
+  /// Set a cookie on MapLibre's own requests, see [NetworkCookies.set].
+  void setNetworkCookie({
+    required String host,
+    required String path,
+    required String name,
+    required String value,
+    required DateTime expires,
+  }) => throw UnsupportedError(
+    'MapLibre network cookies are not supported on this platform.',
+  );
+
   /// Return whether offline manager is supported on the current platform.
   bool get offlineManagerIsSupported => false;
+
+  /// Return whether network cookies are supported on the current platform.
+  bool get networkCookiesAreSupported => false;
 
   /// Return whether permission manager is supported on the current platform.
   bool get permissionManagerIsSupported => false;

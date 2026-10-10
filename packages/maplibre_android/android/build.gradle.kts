@@ -45,6 +45,9 @@ android {
 
     dependencies {
         api("org.maplibre.gl:android-sdk-opengl:13.5.+")
+        // NetworkCookies builds MapLibre's OkHttp client; MapLibre ships this
+        // version itself, but only at runtime scope.
+        implementation("com.squareup.okhttp3:okhttp:4.12.0")
         testImplementation("org.jetbrains.kotlin:kotlin-test")
         testImplementation("org.mockito:mockito-core:5.21.+")
     }
