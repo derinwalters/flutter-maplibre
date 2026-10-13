@@ -53,6 +53,18 @@ abstract class StyleController {
   /// Removes the source with the given [id] from the map's style.
   Future<void> removeSource(String id);
 
+  /// Switch label placement transitions on or off.
+  ///
+  /// On, a symbol fades in or out as its collisions with other symbols
+  /// change, and placement is worked out again at most every 300 ms. Off,
+  /// placement is worked out again on every frame the map draws and a symbol
+  /// shows or hides at once: one added over others displaces them on the
+  /// frame it first appears, and they return on the frame it is gone. They
+  /// are on by default, and on again in every newly loaded style.
+  ///
+  /// A platform that cannot switch them (web) leaves them on.
+  Future<void> setPlacementTransitions({required bool enabled}) async {}
+
   /// Get a list of all attributions from the map style.
   Future<List<String>> getAttributions();
 

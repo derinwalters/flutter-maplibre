@@ -303,6 +303,20 @@ class StyleControllerAndroid extends StyleController {
   });
 
   @override
+  Future<void> setPlacementTransitions({required bool enabled}) async =>
+      using((arena) {
+        if (_jStyle.isReleased) return;
+        // The style's options carry its paint transitions' duration and delay
+        // too, which stay as they are.
+        final current = _jStyle.transition..releasedBy(arena);
+        _jStyle.transition = jni.TransitionOptions.new$1(
+          current.duration,
+          current.delay,
+          enabled,
+        )..releasedBy(arena);
+      });
+
+  @override
   Future<List<String>> getAttributions() async => getAttributionsSync();
 
   @override

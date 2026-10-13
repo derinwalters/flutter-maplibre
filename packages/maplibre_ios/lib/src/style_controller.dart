@@ -321,6 +321,11 @@ class StyleControllerIos extends StyleController {
   Future<void> dispose() async {}
 
   @override
+  Future<void> setPlacementTransitions({required bool enabled}) async {
+    _ffiStyle.performsPlacementTransitions = enabled;
+  }
+
+  @override
   Future<List<String>> getAttributions() async => getAttributionsSync();
 
   @override
