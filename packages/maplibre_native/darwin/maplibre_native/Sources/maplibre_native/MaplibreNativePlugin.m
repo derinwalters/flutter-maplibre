@@ -113,6 +113,9 @@ static void RunOnMain(dispatch_block_t block) {
 @interface MLNGpuTexture : NSObject <FlutterTexture>
 
 @property(nonatomic) int64_t textureId;
+/// The registry the texture is registered with, which its frames and its
+/// unregister go to: the id means nothing to any other engine's.
+@property(nonatomic, weak) NSObject<FlutterTextureRegistry> *registry;
 @property(nonatomic, readonly) NSArray<id<MTLTexture>> *slots;
 
 - (nullable instancetype)initWithDevice:(id<MTLDevice>)device
@@ -128,6 +131,11 @@ static void RunOnMain(dispatch_block_t block) {
                 error:(NSString *_Nullable *_Nonnull)error;
 
 - (void)releaseRetiredSlots;
+
+/// Lets go of the frame Flutter shows, on the way out: an unregister
+/// finishes on Flutter's raster thread, and until then the texture kept the
+/// full-size buffer of its last frame alive.
+- (void)releaseLatest;
 
 /// Makes the finished frame in |slot| the one Flutter shows next.
 - (BOOL)presentSlot:(uint32_t)slot error:(NSString *_Nullable *_Nonnull)error;
@@ -219,6 +227,15 @@ static void RunOnMain(dispatch_block_t block) {
   CVMetalTextureCacheFlush(_cache, 0);
 }
 
+- (void)releaseLatest {
+  os_unfair_lock_lock(&_lock);
+  CVPixelBufferRef latest = _latest;
+  _latest = NULL;
+  _latestSlot = -1;
+  os_unfair_lock_unlock(&_lock);
+  if (latest != NULL) CVPixelBufferRelease(latest);
+}
+
 - (BOOL)presentSlot:(uint32_t)slot error:(NSString *_Nullable *_Nonnull)error {
   if (slot >= _ring.textures.count) {
     *error = [NSString stringWithFormat:@"Slot %u is not in the ring", slot];
@@ -262,14 +279,34 @@ static void RunOnMain(dispatch_block_t block) {
 // State shared by the C API, guarded by gLock. Dart calls the API on its UI
 // thread, and the plugin registers on the main thread.
 static NSLock *gLock;
-static __weak NSObject<FlutterTextureRegistry> *gRegistry;
+/// Every registrar the plugin was registered with: the app's engine, and any
+/// headless engine an app runs for background work, which registers its
+/// plugins too.
+static NSHashTable<NSObject<FlutterPluginRegistrar> *> *gRegistrars;
 static id<MTLDevice> gDevice;
 static NSMutableDictionary<NSNumber *, MLNGpuTexture *> *gTextures;
 
 /// The registry and the device, created on first use, or nil with |error|.
 static NSObject<FlutterTextureRegistry> *_Nullable AcquireRegistry(char *error,
                                                                    size_t error_size) {
-  NSObject<FlutterTextureRegistry> *registry = gRegistry;
+  // The engine that shows views, whose widgets show the texture. A single
+  // registry kept from the latest registration was a headless engine's as soon
+  // as one registered after the app's, and the map's frames went to an engine
+  // nothing on screen draws from.
+  NSObject<FlutterPluginRegistrar> *chosen = nil;
+  for (NSObject<FlutterPluginRegistrar> *registrar in gRegistrars.allObjects) {
+#if TARGET_OS_OSX
+    const BOOL shows = registrar.view != nil;
+#else
+    const BOOL shows = registrar.viewController != nil;
+#endif
+    if (shows) {
+      chosen = registrar;
+      break;
+    }
+    chosen = registrar;
+  }
+  NSObject<FlutterTextureRegistry> *registry = [chosen textures];
   if (registry == nil) {
     WriteError(@"The maplibre_native plugin is not registered.", error, error_size);
     return nil;
@@ -331,6 +368,7 @@ int64_t maplibre_native_create_gpu_texture(uint32_t width, uint32_t height, uint
     texture_id = [registry registerTexture:texture];
   });
   texture.textureId = texture_id;
+  texture.registry = registry;
 
   [gLock lock];
   gTextures[@(texture_id)] = texture;
@@ -368,7 +406,7 @@ bool maplibre_native_present_gpu_texture(int64_t texture_id, uint32_t slot, char
   MLNGpuTexture *texture = FindTexture(texture_id, error, error_size);
   NSString *message = nil;
   const BOOL presented = texture != nil && [texture presentSlot:slot error:&message];
-  NSObject<FlutterTextureRegistry> *registry = gRegistry;
+  NSObject<FlutterTextureRegistry> *registry = texture.registry;
   [gLock unlock];
   if (!presented) {
     if (message != nil) WriteError(message, error, error_size);
@@ -392,9 +430,10 @@ void maplibre_native_dispose_texture(int64_t texture_id) {
   [gLock lock];
   MLNGpuTexture *texture = gTextures[@(texture_id)];
   [gTextures removeObjectForKey:@(texture_id)];
-  NSObject<FlutterTextureRegistry> *registry = gRegistry;
+  NSObject<FlutterTextureRegistry> *registry = texture.registry;
   [gLock unlock];
   if (texture == nil) return;
+  [texture releaseLatest];
   // The registry keeps the texture alive while Flutter may still copy it.
   RunOnMain(^{
     [registry unregisterTexture:texture_id];
@@ -444,13 +483,14 @@ static void RegisterIdeographicFonts(void) {
   if (self == [MaplibreNativePlugin class]) {
     gLock = [[NSLock alloc] init];
     gTextures = [NSMutableDictionary dictionary];
+    gRegistrars = [NSHashTable weakObjectsHashTable];
   }
 }
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
   RegisterIdeographicFonts();
   [gLock lock];
-  gRegistry = [registrar textures];
+  [gRegistrars addObject:registrar];
   [gLock unlock];
 }
 
