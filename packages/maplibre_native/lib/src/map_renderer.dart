@@ -62,7 +62,7 @@ final class MapRenderer implements FrameTargetHost {
 
   final RuntimeHandle _runtime;
   final MapHandle _map;
-  final RenderSessionHandle _session;
+  RenderSessionHandle _session;
   final FrameTarget _target;
 
   /// The Flutter texture id to show in a `Texture` widget.
@@ -90,12 +90,14 @@ final class MapRenderer implements FrameTargetHost {
   Future<List<RenderedFeature>> queryRenderedFeatures(
     RenderedQueryGeometry geometry, {
     List<String>? layerIds,
-  }) => _session.queryRenderedFeatures(
-    geometry,
-    options: layerIds == null
-        ? null
-        : RenderedFeatureQueryOptions(layerIds: layerIds),
-  );
+  }) async => _asleep
+      ? const []
+      : _session.queryRenderedFeatures(
+          geometry,
+          options: layerIds == null
+              ? null
+              : RenderedFeatureQueryOptions(layerIds: layerIds),
+        );
 
   @override
   bool get disposed => _disposed;
@@ -220,7 +222,8 @@ final class MapRenderer implements FrameTargetHost {
         _pendingExtent = null;
         _extent = extent;
         await onGpuQueue(() async {
-          if (!_disposed) await _target.resize(_session, extent);
+          // A sleeping renderer takes the extent when it wakes.
+          if (!_disposed && !_asleep) await _target.resize(_session, extent);
         });
       }
     } on Object catch (error) {
@@ -235,6 +238,45 @@ final class MapRenderer implements FrameTargetHost {
   /// already armed still renders one more frame. On resume, the next frame
   /// shows the map's latest update.
   bool get paused => _paused;
+
+  /// Whether the session is closed and the ring shrunk, see [sleep].
+  bool get asleep => _asleep;
+  var _asleep = false;
+
+  /// Closes the session, which frees the renderer's GPU memory, and gives
+  /// up the texture, keeping the map with its style, sources and camera.
+  ///
+  /// iOS freezes a suspended app, which keeps it from being killed for
+  /// memory, only while the memory it shares with the system stays under a
+  /// cap of a few dozen megabytes, and a map's GPU memory and texture are all
+  /// shared: one map kept a backgrounded app at 162 MB, and 63 MB asleep with
+  /// its texture registered. [wake] attaches a new session under a new
+  /// [textureId], which renders from the map's loaded data.
+  Future<void> sleep() => onGpuQueue(() async {
+    if (_disposed || _asleep) return;
+    _asleep = true;
+    _pendingToken = null;
+    await _target.endSession(_session);
+    await _target.shrink();
+  });
+
+  /// Attaches a new session at the map's extent and renders, see [sleep].
+  Future<void> wake() => onGpuQueue(() async {
+    if (_disposed || !_asleep) return;
+    final extent = this.extent;
+    await _target.grow(extent);
+    final attachment = _target.attach(
+      _map,
+      extent,
+      _FrameWake(_drainFrames).wake,
+    );
+    _session = attachment.session;
+    await attachment.ready;
+    _extent = extent;
+    _pendingExtent = null;
+    _asleep = false;
+    demandFrame();
+  });
   var _paused = false;
   set paused(bool paused) {
     if (paused == _paused) return;
@@ -248,6 +290,7 @@ final class MapRenderer implements FrameTargetHost {
   void demandFrame() {
     if (_disposed ||
         _paused ||
+        _asleep ||
         _pendingToken != null ||
         !_target.acceptsFrames) {
       return;
@@ -260,7 +303,7 @@ final class MapRenderer implements FrameTargetHost {
   }
 
   void _drainFrames() {
-    if (_disposed) return;
+    if (_disposed || _asleep) return;
     RenderFrameResult? result;
     for (final candidate in _session.drainFrameResults()) {
       if (candidate.token == _pendingToken) result = candidate;
@@ -317,7 +360,7 @@ final class MapRenderer implements FrameTargetHost {
     _disposed = true;
     // A frame in presentation is released before the session goes.
     await _gpuQueue;
-    await _target.endSession(_session);
+    if (!_asleep) await _target.endSession(_session);
     await _map.close();
     await _runtime.close();
     _target.dispose();

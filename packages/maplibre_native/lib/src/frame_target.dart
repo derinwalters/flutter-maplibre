@@ -60,6 +60,15 @@ abstract base class FrameTarget {
   /// there was none to hand over.
   Future<bool> present(RenderSessionHandle session);
 
+  /// Gives up the texture and what it holds for frames, once the session is
+  /// closed; [textureId] is not shown until [grow]. See `MapRenderer.sleep`.
+  /// A target that cannot let go keeps everything.
+  Future<void> shrink() async {}
+
+  /// Makes the target ready for a session at [extent] again after [shrink],
+  /// under a new [textureId] when the texture went.
+  Future<void> grow(LogicalExtent extent) async {}
+
   /// Closes the session. A core-worker session detaches from its target
   /// there, off the UI thread, and the returned future completes once no
   /// library thread touches the target's graphics objects anymore.
@@ -80,7 +89,7 @@ abstract base class BorrowedRingTarget<Slot> extends FrameTarget {
   BorrowedRingTarget(this.textureId, this.slots);
 
   @override
-  final int textureId;
+  int textureId;
 
   /// The ring the session renders into.
   List<Slot> slots;

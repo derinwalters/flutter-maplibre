@@ -137,6 +137,37 @@ final class _MetalTextureTarget
     return super.endSession(session);
   }
 
+  /// Whether [textureId] is registered with Flutter.
+  var _registered = true;
+
+  /// Swaps in a one-pixel ring and unregisters the texture; it takes both.
+  /// Flutter keeps every buffer it sampled while the texture is registered,
+  /// and finishes an unregister later, on its raster thread, holding the
+  /// plugin's texture and its ring until then. Measured on the simulator: a
+  /// resize alone kept all three buffers, an unregister alone kept them too,
+  /// and both kept only the frame last shown.
   @override
-  void disposeTexture() => DarwinPlugin.disposeTexture(textureId);
+  Future<void> shrink() async {
+    if (!_registered) return;
+    slots = resizeRing(1, 1);
+    releaseRetiredRings();
+    disposeTexture();
+  }
+
+  @override
+  Future<void> grow(LogicalExtent extent) async {
+    if (_registered) return;
+    final (width, height) = physicalSize(extent);
+    final texture = DarwinPlugin.createGpuTexture(width, height, gpuSlotCount);
+    textureId = texture.textureId;
+    slots = texture.slots;
+    _registered = true;
+  }
+
+  @override
+  void disposeTexture() {
+    if (!_registered) return;
+    _registered = false;
+    DarwinPlugin.disposeTexture(textureId);
+  }
 }

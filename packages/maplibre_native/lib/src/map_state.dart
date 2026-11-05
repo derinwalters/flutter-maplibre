@@ -59,6 +59,45 @@ class MapLibreMapStateNative extends MapLibreMapState {
   var _gestureActive = false;
   var _cameraMoving = false;
 
+  /// Whether the app is hidden, which with [isRenderingPaused] puts the
+  /// renderer to sleep, see [MapRenderer.sleep].
+  bool _appHidden = switch (WidgetsBinding.instance.lifecycleState) {
+    AppLifecycleState.hidden || AppLifecycleState.paused => true,
+    _ => false,
+  };
+
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(
+      onHide: () {
+        _appHidden = true;
+        _syncSleep();
+      },
+      onShow: () {
+        _appHidden = false;
+        _syncSleep();
+      },
+    );
+  }
+
+  /// Sleeps while nobody can see the map, and wakes into a new texture.
+  void _syncSleep() {
+    final renderer = _renderer;
+    if (renderer == null || _disposed) return;
+    if (_appHidden || isRenderingPaused) {
+      unawaited(renderer.sleep());
+    } else if (renderer.asleep) {
+      unawaited(
+        renderer.wake().then((_) {
+          if (mounted) setState(() {});
+        }),
+      );
+    }
+  }
+
   /// The camera that the running camera animation ends at, to jump there
   /// when the map pauses.
   mln.CameraOptions? _animationTarget;
@@ -119,6 +158,7 @@ class MapLibreMapStateNative extends MapLibreMapState {
         return;
       }
       _renderer = renderer..paused = isRenderingPaused;
+      _syncSleep();
       setState(() {
         camera = _readCamera();
         isInitialized = true;
@@ -204,6 +244,7 @@ class MapLibreMapStateNative extends MapLibreMapState {
   @override
   void setRenderingPaused({required bool paused}) {
     _renderer?.paused = paused;
+    _syncSleep();
     // Camera animations advance only while the map renders. One that runs
     // now ends at its target, so its caller does not wait for the resume.
     final target = _animationTarget;
@@ -226,6 +267,7 @@ class MapLibreMapStateNative extends MapLibreMapState {
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _disposed = true;
     style?.dispose();
     _loadingStyle?.dispose();
