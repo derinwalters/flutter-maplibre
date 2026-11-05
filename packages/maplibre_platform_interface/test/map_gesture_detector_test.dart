@@ -204,14 +204,14 @@ void main() {
       expect(camera.updates.every((u) => u.rotateBy.abs() <= 3 + 1e-9), isTrue);
     });
 
-    testWidgets('two fingers held for three seconds still pinch and twist', (
+    testWidgets('two fingers held for five seconds still pinch and twist', (
       tester,
     ) async {
       await pumpMap(tester);
       await pinchAndTwist(
         tester,
         degrees: 60,
-        hold: const Duration(seconds: 3),
+        hold: const Duration(seconds: 5),
       );
       expect(camera.rotated, closeTo(-47, 1e-9));
       expect(camera.zoomed, greaterThan(0.5));
@@ -219,13 +219,13 @@ void main() {
     });
 
     testWidgets(
-      'two fingers held for three seconds still only zoom for a small twist',
+      'two fingers held for five seconds still only zoom for a small twist',
       (tester) async {
         await pumpMap(tester);
         await pinchAndTwist(
           tester,
           degrees: 8,
-          hold: const Duration(seconds: 3),
+          hold: const Duration(seconds: 5),
         );
         expect(camera.zoomed, greaterThan(0.5));
         expect(camera.rotated, 0);
@@ -438,6 +438,30 @@ void main() {
       expect(camera.pitched, closeTo(19 * 10 / 2 * 0.25, 1e-9));
       expect(camera.panned, Offset.zero);
       expect(camera.zoomed, 0);
+    });
+
+    testWidgets('tilt and twist work the same after a five second hold', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      const hold = Duration(seconds: 5);
+      final a = await tester.startGesture(_center - const Offset(50, 0));
+      final b = await tester.startGesture(_center + const Offset(50, 0));
+      await tester.pump(hold);
+      for (var i = 0; i < 10; i++) {
+        await a.moveBy(const Offset(0, -10));
+        await b.moveBy(const Offset(0, -10));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+      final heldTilt = camera.pitched;
+      expect(heldTilt, closeTo(19 * 10 / 2 * 0.25, 1e-9));
+      camera.updates.clear();
+      await pinchAndTwist(tester, degrees: 60, hold: hold);
+      expect(camera.rotated, closeTo(-47, 1e-9));
+      expect(events.whereType<MapEventLongClick>(), isEmpty);
     });
 
     testWidgets('double tap and drag down zooms in', (tester) async {
