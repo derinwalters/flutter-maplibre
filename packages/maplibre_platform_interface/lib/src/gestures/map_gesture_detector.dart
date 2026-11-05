@@ -33,7 +33,7 @@ const _shoveSlop = 10.0;
 /// whatever the hand means, so a smaller turn only zooms or pans, and the
 /// bearing stays where it was. Past it the map follows the fingers from where
 /// they crossed, so it does not jump.
-const double _rotateSlop = 12 * pi / 180;
+const double _rotateSlop = 13 * pi / 180;
 
 /// A long press that only one finger can make.
 ///
@@ -78,7 +78,7 @@ class _OneFingerLongPressRecognizer extends LongPressGestureRecognizer {
 ///
 /// Flutter hit-tests the pointers, so widgets over the map keep theirs. The
 /// gestures follow the platform conventions: a drag pans, a pinch zooms and,
-/// once the fingers have twisted 12 degrees, turns the map, a scroll wheel
+/// once the fingers have twisted 13 degrees, turns the map, a scroll wheel
 /// and a double tap zoom, a double tap and drag zooms, two fingers side by
 /// side dragged vertically tilt, and a right-button or Ctrl + left-button
 /// mouse drag rotates and tilts. A long click is a hold of one finger: a
