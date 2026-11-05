@@ -145,7 +145,8 @@ final class _MetalTextureTarget
   /// and finishes an unregister later, on its raster thread, holding the
   /// plugin's texture and its ring until then. Measured on the simulator: a
   /// resize alone kept all three buffers, an unregister alone kept them too,
-  /// and both kept only the frame last shown.
+  /// and both kept only the frame last shown, which the plugin lets go of when
+  /// the texture is disposed.
   @override
   Future<void> shrink() async {
     if (!_registered) return;

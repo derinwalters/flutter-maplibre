@@ -60,7 +60,7 @@ class MapLibreMapStateNative extends MapLibreMapState {
   var _cameraMoving = false;
 
   /// Whether the app is hidden, which with [isRenderingPaused] puts the
-  /// renderer to sleep, see [MapRenderer.sleep].
+  /// renderer to sleep, see [MapRenderer.setAsleep].
   bool _appHidden = switch (WidgetsBinding.instance.lifecycleState) {
     AppLifecycleState.hidden || AppLifecycleState.paused => true,
     _ => false,
@@ -83,19 +83,10 @@ class MapLibreMapStateNative extends MapLibreMapState {
     );
   }
 
-  /// Sleeps while nobody can see the map, and wakes into a new texture.
+  /// Sleeps while nobody can see the map, see [MapRenderer.setAsleep].
   void _syncSleep() {
-    final renderer = _renderer;
-    if (renderer == null || _disposed) return;
-    if (_appHidden || isRenderingPaused) {
-      unawaited(renderer.sleep());
-    } else if (renderer.asleep) {
-      unawaited(
-        renderer.wake().then((_) {
-          if (mounted) setState(() {});
-        }),
-      );
-    }
+    if (_disposed) return;
+    _renderer?.setAsleep(asleep: _appHidden || isRenderingPaused);
   }
 
   /// The camera that the running camera animation ends at, to jump there
@@ -157,7 +148,11 @@ class MapLibreMapStateNative extends MapLibreMapState {
         await renderer.dispose();
         return;
       }
-      _renderer = renderer..paused = isRenderingPaused;
+      _renderer = renderer
+        ..paused = isRenderingPaused
+        ..onTextureChanged = () {
+          if (mounted) setState(() {});
+        };
       _syncSleep();
       setState(() {
         camera = _readCamera();

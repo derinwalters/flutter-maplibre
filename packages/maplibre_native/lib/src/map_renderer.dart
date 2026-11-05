@@ -238,31 +238,51 @@ final class MapRenderer implements FrameTargetHost {
   /// already armed still renders one more frame. On resume, the next frame
   /// shows the map's latest update.
   bool get paused => _paused;
+  var _paused = false;
+  set paused(bool paused) {
+    if (paused == _paused) return;
+    _paused = paused;
+    if (!paused) demandFrame();
+  }
 
-  /// Whether the session is closed and the ring shrunk, see [sleep].
+  /// Whether the session is closed and the texture given up, see [setAsleep].
   bool get asleep => _asleep;
   var _asleep = false;
 
-  /// Closes the session, which frees the renderer's GPU memory, and gives
-  /// up the texture, keeping the map with its style, sources and camera.
-  ///
-  /// iOS freezes a suspended app, which keeps it from being killed for
-  /// memory, only while the memory it shares with the system stays under a
-  /// cap of a few dozen megabytes, and a map's GPU memory and texture are all
-  /// shared: one map kept a backgrounded app at 162 MB, and 63 MB asleep with
-  /// its texture registered. [wake] attaches a new session under a new
-  /// [textureId], which renders from the map's loaded data.
-  Future<void> sleep() => onGpuQueue(() async {
-    if (_disposed || _asleep) return;
-    _asleep = true;
-    _pendingToken = null;
-    await _target.endSession(_session);
-    await _target.shrink();
-  });
+  /// What the last [setAsleep] asked for, which [_settle] brings the renderer
+  /// to on the GPU queue.
+  var _wantAsleep = false;
 
-  /// Attaches a new session at the map's extent and renders, see [sleep].
-  Future<void> wake() => onGpuQueue(() async {
-    if (_disposed || !_asleep) return;
+  /// Called after a wake replaced the texture, so the [textureId] shown has to
+  /// change with it.
+  void Function()? onTextureChanged;
+
+  /// Puts the map to sleep, or wakes it; the last call wins however the
+  /// transitions queued before it interleave.
+  ///
+  /// Asleep, the session is closed, which frees the renderer's GPU memory, and
+  /// the texture is given up; the map keeps its style, sources and camera.
+  /// iOS freezes a suspended app, which keeps it from being killed for memory,
+  /// only while the memory it shares with the system stays under a cap of a
+  /// few dozen megabytes, and a map's GPU memory and texture are all shared:
+  /// one map kept a backgrounded app at 162 MB, and 63 MB asleep with its
+  /// texture registered. Awake again, a new session renders under a new
+  /// [textureId] from the map's loaded data.
+  void setAsleep({required bool asleep}) {
+    if (asleep == _wantAsleep) return;
+    _wantAsleep = asleep;
+    unawaited(onGpuQueue(_settle));
+  }
+
+  Future<void> _settle() async {
+    if (_disposed || _wantAsleep == _asleep) return;
+    if (_wantAsleep) {
+      _asleep = true;
+      _pendingToken = null;
+      await _target.endSession(_session);
+      await _target.shrink();
+      return;
+    }
     final extent = this.extent;
     await _target.grow(extent);
     final attachment = _target.attach(
@@ -275,13 +295,8 @@ final class MapRenderer implements FrameTargetHost {
     _extent = extent;
     _pendingExtent = null;
     _asleep = false;
+    onTextureChanged?.call();
     demandFrame();
-  });
-  var _paused = false;
-  set paused(bool paused) {
-    if (paused == _paused) return;
-    _paused = paused;
-    if (!paused) demandFrame();
   }
 
   /// Arms a demand that renders the map's next update, and waits for one
