@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -147,6 +149,83 @@ void main() {
             .every((u) => (u.around! - _center).distance <= 2.5),
         isTrue,
       );
+    });
+
+    /// Spreads two fingers apart, which the pinch recognizer claims at once,
+    /// then keeps spreading them while they turn [degrees] clockwise about the
+    /// center in twenty moves. [swapped] puts the finger that went down first
+    /// on the right, so the line between them points left.
+    Future<void> pinchAndTwist(
+      WidgetTester tester, {
+      required double degrees,
+      bool swapped = false,
+    }) async {
+      Offset arm(double radius, double angle) =>
+          Offset(radius * cos(angle), radius * sin(angle)) * (swapped ? -1 : 1);
+      final a = await tester.startGesture(_center - arm(50, 0));
+      final b = await tester.startGesture(_center + arm(50, 0));
+      await a.moveTo(_center - arm(70, 0));
+      await b.moveTo(_center + arm(70, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+      for (var i = 1; i <= 20; i++) {
+        final radius = 70 + 40 * i / 20;
+        final angle = degrees * pi / 180 * i / 20;
+        await a.moveTo(_center - arm(radius, angle));
+        await b.moveTo(_center + arm(radius, angle));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a pinch that twists a little only zooms', (tester) async {
+      await pumpMap(tester);
+      await pinchAndTwist(tester, degrees: 10);
+      expect(camera.zoomed, greaterThan(0.5));
+      expect(camera.rotated, 0);
+      expect(camera.updates.every((u) => u.rotateBy == 0), isTrue);
+    });
+
+    testWidgets('a twist past the slop turns the map from there on', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      await pinchAndTwist(tester, degrees: 60);
+      // A clockwise twist lowers the bearing, by the twist less the 15
+      // degrees the fingers made before the map followed.
+      expect(camera.rotated, closeTo(-45, 1e-9));
+      expect(camera.zoomed, greaterThan(0.5));
+      // The map never jumps: no single move turns it by more than the
+      // fingers turned.
+      expect(camera.updates.every((u) => u.rotateBy.abs() <= 3 + 1e-9), isTrue);
+    });
+
+    testWidgets('the order the fingers went down in makes no difference', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      await pinchAndTwist(tester, degrees: 60, swapped: true);
+      expect(camera.rotated, closeTo(-45, 1e-9));
+      expect(camera.updates.every((u) => u.rotateBy.abs() <= 3 + 1e-9), isTrue);
+      camera.updates.clear();
+      await pinchAndTwist(tester, degrees: 10, swapped: true);
+      expect(camera.rotated, 0);
+    });
+
+    testWidgets('a twist the other way raises the bearing', (tester) async {
+      await pumpMap(tester);
+      await pinchAndTwist(tester, degrees: -60);
+      expect(camera.rotated, closeTo(45, 1e-9));
+    });
+
+    testWidgets('a twist leaves the bearing when rotating is off', (
+      tester,
+    ) async {
+      await pumpMap(tester, gestures: const MapGestures.all(rotate: false));
+      await pinchAndTwist(tester, degrees: 60);
+      expect(camera.rotated, 0);
+      expect(camera.zoomed, greaterThan(0.5));
     });
 
     testWidgets('scroll wheel zooms the map', (tester) async {
