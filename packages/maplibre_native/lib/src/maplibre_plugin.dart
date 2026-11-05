@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:maplibre_native/src/map_state.dart';
+import 'package:maplibre_native/src/network_cookies.dart';
 import 'package:maplibre_native/src/offline_manager.dart';
 import 'package:maplibre_platform_interface/maplibre_platform_interface.dart';
 
@@ -41,4 +42,22 @@ class MapLibrePluginNative extends MapLibrePlatform {
 
   @override
   bool get offlineManagerIsSupported => isPlatformSupported;
+
+  @override
+  void setNetworkCookie({
+    required String host,
+    required String path,
+    required String name,
+    required String value,
+    required DateTime expires,
+  }) => NetworkCookieRules.set(
+    host: host,
+    path: path,
+    name: name,
+    value: value,
+    expires: expires,
+  );
+
+  @override
+  bool get networkCookiesAreSupported => isPlatformSupported;
 }

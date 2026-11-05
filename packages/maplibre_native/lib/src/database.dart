@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:maplibre_native/src/android/android_plugin.dart';
+import 'package:maplibre_native/src/network_cookies.dart';
 import 'package:maplibre_native_ffi/maplibre_native_ffi.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -31,5 +32,12 @@ Future<RuntimeHandle> createRuntime() async {
   final path = await databasePath();
   // Android needs the C library initialized before its first use.
   if (Platform.isAndroid) AndroidPlugin.initialize();
-  return RuntimeHandle.create(RuntimeOptions(cachePath: path));
+  final runtime = RuntimeHandle.create(RuntimeOptions(cachePath: path));
+  try {
+    await NetworkCookieRules.attach(runtime);
+  } on Object {
+    await runtime.close();
+    rethrow;
+  }
+  return runtime;
 }

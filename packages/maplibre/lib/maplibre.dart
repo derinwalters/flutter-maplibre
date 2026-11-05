@@ -99,6 +99,7 @@ export 'package:maplibre_platform_interface/maplibre_platform_interface.dart'
         MapStyleFile,
         MapStyleJson,
         MapStyleUrl,
+        NetworkCookies,
         NumExpression,
         OfflineDownloadException,
         OfflineGeometryRegionDefinition,
