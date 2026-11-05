@@ -154,16 +154,19 @@ void main() {
     /// Spreads two fingers apart, which the pinch recognizer claims at once,
     /// then keeps spreading them while they turn [degrees] clockwise about the
     /// center in twenty moves. [swapped] puts the finger that went down first
-    /// on the right, so the line between them points left.
+    /// on the right, so the line between them points left. [hold] is how long
+    /// the fingers rest on the map before they move.
     Future<void> pinchAndTwist(
       WidgetTester tester, {
       required double degrees,
       bool swapped = false,
+      Duration hold = Duration.zero,
     }) async {
       Offset arm(double radius, double angle) =>
           Offset(radius * cos(angle), radius * sin(angle)) * (swapped ? -1 : 1);
       final a = await tester.startGesture(_center - arm(50, 0));
       final b = await tester.startGesture(_center + arm(50, 0));
+      if (hold > Duration.zero) await tester.pump(hold);
       await a.moveTo(_center - arm(70, 0));
       await b.moveTo(_center + arm(70, 0));
       await tester.pump(const Duration(milliseconds: 16));
@@ -192,21 +195,49 @@ void main() {
     ) async {
       await pumpMap(tester);
       await pinchAndTwist(tester, degrees: 60);
-      // A clockwise twist lowers the bearing, by the twist less the 10
+      // A clockwise twist lowers the bearing, by the twist less the 13
       // degrees the fingers made before the map followed.
-      expect(camera.rotated, closeTo(-50, 1e-9));
+      expect(camera.rotated, closeTo(-47, 1e-9));
       expect(camera.zoomed, greaterThan(0.5));
       // The map never jumps: no single move turns it by more than the
       // fingers turned.
       expect(camera.updates.every((u) => u.rotateBy.abs() <= 3 + 1e-9), isTrue);
     });
 
+    testWidgets('two fingers held for three seconds still pinch and twist', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      await pinchAndTwist(
+        tester,
+        degrees: 60,
+        hold: const Duration(seconds: 3),
+      );
+      expect(camera.rotated, closeTo(-47, 1e-9));
+      expect(camera.zoomed, greaterThan(0.5));
+      expect(events.whereType<MapEventLongClick>(), isEmpty);
+    });
+
+    testWidgets(
+      'two fingers held for three seconds still only zoom for a small twist',
+      (tester) async {
+        await pumpMap(tester);
+        await pinchAndTwist(
+          tester,
+          degrees: 8,
+          hold: const Duration(seconds: 3),
+        );
+        expect(camera.zoomed, greaterThan(0.5));
+        expect(camera.rotated, 0);
+      },
+    );
+
     testWidgets('the order the fingers went down in makes no difference', (
       tester,
     ) async {
       await pumpMap(tester);
       await pinchAndTwist(tester, degrees: 60, swapped: true);
-      expect(camera.rotated, closeTo(-50, 1e-9));
+      expect(camera.rotated, closeTo(-47, 1e-9));
       expect(camera.updates.every((u) => u.rotateBy.abs() <= 3 + 1e-9), isTrue);
       camera.updates.clear();
       await pinchAndTwist(tester, degrees: 8, swapped: true);
@@ -216,7 +247,7 @@ void main() {
     testWidgets('a twist the other way raises the bearing', (tester) async {
       await pumpMap(tester);
       await pinchAndTwist(tester, degrees: -60);
-      expect(camera.rotated, closeTo(50, 1e-9));
+      expect(camera.rotated, closeTo(47, 1e-9));
     });
 
     testWidgets('a twist leaves the bearing when rotating is off', (

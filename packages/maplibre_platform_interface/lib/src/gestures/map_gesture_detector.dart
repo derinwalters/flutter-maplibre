@@ -33,19 +33,57 @@ const _shoveSlop = 10.0;
 /// whatever the hand means, so a smaller turn only zooms or pans, and the
 /// bearing stays where it was. Past it the map follows the fingers from where
 /// they crossed, so it does not jump.
-const double _rotateSlop = 10 * pi / 180;
+const double _rotateSlop = 13 * pi / 180;
+
+/// A long press that only one finger can make.
+///
+/// The long press recognizer times the first finger alone, and when its
+/// deadline passes it wins the gesture arena over every other recognizer,
+/// whatever else has landed meanwhile. So two fingers resting on the map for
+/// half a second before a pinch, twist or tilt were a long press, and the
+/// pinch never moved the camera. A second finger landing while the hold is
+/// still pending ends it instead; once the hold has been accepted it is left
+/// as it is.
+class _OneFingerLongPressRecognizer extends LongPressGestureRecognizer {
+  _OneFingerLongPressRecognizer();
+
+  // Whether the arena has gone to the hold, which a second finger cannot
+  // take back.
+  var _held = false;
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    if (state == GestureRecognizerState.possible && !_held) {
+      resolve(GestureDisposition.rejected);
+      return;
+    }
+    super.addAllowedPointer(event);
+  }
+
+  @override
+  void acceptGesture(int pointer) {
+    _held = true;
+    super.acceptGesture(pointer);
+  }
+
+  @override
+  void didStopTrackingLastPointer(int pointer) {
+    _held = false;
+    super.didStopTrackingLastPointer(pointer);
+  }
+}
 
 /// Recognizes map gestures on [child] and hands their camera changes to
 /// [camera].
 ///
 /// Flutter hit-tests the pointers, so widgets over the map keep theirs. The
 /// gestures follow the platform conventions: a drag pans, a pinch zooms and,
-/// once the fingers have twisted 10 degrees, turns the map, a scroll wheel
+/// once the fingers have twisted 13 degrees, turns the map, a scroll wheel
 /// and a double tap zoom, a double tap and drag zooms, two fingers side by
 /// side dragged vertically tilt, and a right-button or Ctrl + left-button
 /// mouse drag rotates and tilts. A long click is a hold of one finger: a
-/// touch that had a second finger on the map at any point reports none.
-/// [gestures] turns them off by kind.
+/// second finger landing during the hold ends it, and leaves the fingers to
+/// the pinch, twist or tilt. [gestures] turns them off by kind.
 class MapGestureDetector extends StatefulWidget {
   /// Creates a gesture layer over a map.
   const MapGestureDetector({
@@ -113,11 +151,6 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
   final _touchPointers = <int>{};
   Offset? _touchDownPosition;
 
-  // Whether two fingers have been down together since the last time none
-  // was. The long press recognizer times the first finger alone, so two
-  // fingers held for a moment before a pinch would otherwise be a long click.
-  var _multiTouch = false;
-
   // The last tap's release, which a second touch nearby starts a quick zoom
   // from.
   Duration? _lastTapUpTime;
@@ -162,18 +195,31 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
       onPointerMove: _onPointerMove,
       onPointerUp: _onPointerEnd,
       onPointerCancel: _onPointerEnd,
-      child: GestureDetector(
+      child: RawGestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTapUp: (details) => _emitUserInput(details.localPosition, _click),
-        onSecondaryTapUp: (details) =>
-            _emitUserInput(details.localPosition, _secondaryClick),
-        onLongPressStart: _onLongPressStart,
-        onDoubleTapDown: _onDoubleTapDown,
-        onDoubleTap: _onDoubleTap,
-        onScaleStart: scales ? _onScaleStart : null,
-        onScaleUpdate: scales ? _onScaleUpdate : null,
-        onScaleEnd: scales ? _onScaleEnd : null,
-        child: widget.child,
+        gestures: {
+          _OneFingerLongPressRecognizer:
+              GestureRecognizerFactoryWithHandlers<
+                _OneFingerLongPressRecognizer
+              >(
+                _OneFingerLongPressRecognizer.new,
+                (recognizer) =>
+                    recognizer.onLongPressStart = (details) =>
+                        _emitUserInput(details.localPosition, _longClick),
+              ),
+        },
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapUp: (details) => _emitUserInput(details.localPosition, _click),
+          onSecondaryTapUp: (details) =>
+              _emitUserInput(details.localPosition, _secondaryClick),
+          onDoubleTapDown: _onDoubleTapDown,
+          onDoubleTap: _onDoubleTap,
+          onScaleStart: scales ? _onScaleStart : null,
+          onScaleUpdate: scales ? _onScaleUpdate : null,
+          onScaleEnd: scales ? _onScaleEnd : null,
+          child: widget.child,
+        ),
       ),
     );
   }
@@ -198,13 +244,6 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
     final point = widget.toLngLat(position);
     if (point == null) return;
     onEvent(create(point, position));
-  }
-
-  /// Reports a long click, unless a second finger touched the map while the
-  /// first was held: that is the start of a pinch, a twist or a tilt.
-  void _onLongPressStart(LongPressStartDetails details) {
-    if (_multiTouch) return;
-    _emitUserInput(details.localPosition, _longClick);
   }
 
   void _onDoubleTapDown(TapDownDetails details) {
@@ -263,9 +302,7 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
     _touchPointers.add(event.pointer);
     _shovePosition[event.pointer] = event.localPosition;
     if (_touchPointers.length > 1) {
-      // A second finger makes it a pinch or tilt, not a tap, a long press or
-      // a quick zoom.
-      _multiTouch = true;
+      // A second finger makes it a pinch or tilt, not a tap or a quick zoom.
       _touchDownPosition = null;
       _stopQuickZoom();
       _startShove();
@@ -333,7 +370,6 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
     _lastTapUpTime = tapped ? event.timeStamp : null;
     _lastTapUpPosition = tapped ? event.localPosition : null;
     _touchDownPosition = null;
-    if (_touchPointers.isEmpty) _multiTouch = false;
     if (event.pointer == _quickZoomPointer) _stopQuickZoom();
   }
 
