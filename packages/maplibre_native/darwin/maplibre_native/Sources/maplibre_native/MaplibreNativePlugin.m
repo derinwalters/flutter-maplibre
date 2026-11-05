@@ -412,6 +412,32 @@ static const MaplibreNativeSymbol kSymbols[] = {
     {NULL, NULL},
 };
 
+/// Hands Info.plist's MLNIdeographicFontFamilyName to the C library's local
+/// glyph rasterizer, which reads its fonts from the user defaults alone, as the
+/// iOS and macOS SDKs honoured the key: a font name, a list of them, or YES for
+/// the system font, whose cascade picks the CJK face of the device's language.
+/// Without it every CJK, kana and Hangul glyph is downloaded from the style's
+/// glyph server, range by range.
+static void RegisterIdeographicFonts(void) {
+  static NSString *const kKey = @"MLNIdeographicFontFamilyName";
+  id value = [NSBundle.mainBundle objectForInfoDictionaryKey:kKey];
+  NSArray<NSString *> *names = nil;
+  if ([value isKindOfClass:NSString.class]) {
+    names = @[ value ];
+  } else if ([value isKindOfClass:NSArray.class]) {
+    names = value;
+  } else if ([value isKindOfClass:NSNumber.class] && [value boolValue]) {
+#if TARGET_OS_OSX
+    names = @[ [NSFont systemFontOfSize:0].fontName ];
+#else
+    names = @[ [UIFont systemFontOfSize:0].fontName ];
+#endif
+  }
+  if (names.count > 0) {
+    [NSUserDefaults.standardUserDefaults registerDefaults:@{kKey : names}];
+  }
+}
+
 @implementation MaplibreNativePlugin
 
 + (void)initialize {
@@ -422,6 +448,7 @@ static const MaplibreNativeSymbol kSymbols[] = {
 }
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
+  RegisterIdeographicFonts();
   [gLock lock];
   gRegistry = [registrar textures];
   [gLock unlock];
