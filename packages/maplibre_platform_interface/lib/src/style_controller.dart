@@ -29,6 +29,18 @@ abstract class StyleController {
   /// not part of the batch.
   void batch(void Function() updates);
 
+  /// Switch label placement transitions on or off.
+  ///
+  /// On, a symbol fades in or out as its collisions with other symbols
+  /// change, and placement is worked out again at most every 300 ms. Off,
+  /// placement is worked out again on every frame the map draws and a symbol
+  /// shows or hides at once: one added over others displaces them on the
+  /// frame it first appears, and they return on the frame it is gone. They
+  /// are on by default, and on again in every newly loaded style.
+  ///
+  /// A platform that cannot switch them (web) leaves them on.
+  Future<void> setPlacementTransitions({required bool enabled}) async {}
+
   /// The attributions of the sources in the map style.
   ///
   /// The list follows the sources of the style. A source that loads its
