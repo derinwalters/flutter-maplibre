@@ -77,7 +77,9 @@ class _OneFingerLongPressRecognizer extends LongPressGestureRecognizer {
 /// [camera].
 ///
 /// Flutter hit-tests the pointers, so widgets over the map keep theirs. The
-/// gestures follow the platform conventions: a drag pans, a pinch zooms and,
+/// gestures follow the platform conventions: a drag pans, from where the
+/// finger touched down if [MapGestures.panPhysics] follow it from there and
+/// from where the drag was recognized otherwise, a pinch zooms and,
 /// once the fingers have twisted 14 degrees, turns the map, a scroll wheel
 /// and a double tap zoom, a double tap and drag zooms, two fingers side by
 /// side dragged vertically tilt, and a right-button or Ctrl + left-button
@@ -142,12 +144,17 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
   var _turned = 0.0;
   var _rotating = false;
 
+  // Where the first update of a one-finger drag pans the map from: where the
+  // finger touched down, if the pan physics follow it from there, so the
+  // pixels it moved before the drag was recognized move the map too.
+  Offset? _panFromTouchDown;
+
   // The mouse pointer that rotates and tilts: a right-button or Ctrl and
   // left-button drag.
   int? _secondaryPointer;
 
   // Touch pointers that are down, and where the only one went down, to tell
-  // a tap from a drag.
+  // a tap from a drag and to pan a drag from there.
   final _touchPointers = <int>{};
   Offset? _touchDownPosition;
 
@@ -463,6 +470,11 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
     _twist = 0;
     _turned = 0;
     _rotating = false;
+    _panFromTouchDown =
+        details.pointerCount == 1 &&
+            _gestures.effectivePanPhysics.followsFromTouchDown
+        ? _touchDownPosition
+        : null;
     _beginGesture();
   }
 
@@ -492,18 +504,20 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
     final scale = details.scale / _lastScale;
     final rotation = gestures.rotate ? _rotationBy(details.rotation) : 0.0;
     _lastScale = details.scale;
+    final panFromTouchDown = _panFromTouchDown;
+    _panFromTouchDown = null;
     // A quick zoom, tilt, or mouse rotation drives the camera while its
     // pointers also reach the scale recognizer.
     if (_quickZooming || _shoving || _secondaryPointer != null) return;
 
     final focal = details.localFocalPoint;
-    final pan = details.focalPointDelta;
-    final pans = gestures.pan && pan != Offset.zero;
+    final panFrom = panFromTouchDown ?? focal - details.focalPointDelta;
+    final pans = gestures.pan && panFrom != focal;
     final zooms = gestures.zoom && scale != 1 && scale.isFinite && scale > 0;
     final rotates = gestures.rotate && rotation != 0;
     _camera.gestureUpdate(
       GestureCameraUpdate(
-        panFrom: pans ? focal - pan : null,
+        panFrom: pans ? panFrom : null,
         panTo: pans ? focal : null,
         zoomBy: zooms ? log(scale) / ln2 : 0,
         // A clockwise twist is a positive rotation in Flutter and turns the

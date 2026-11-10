@@ -99,6 +99,7 @@ export 'package:maplibre_platform_interface/maplibre_platform_interface.dart'
         MapStyleFile,
         MapStyleJson,
         MapStyleUrl,
+        MobilePanPhysics,
         NetworkCookies,
         NumExpression,
         OfflineDownloadException,
@@ -112,6 +113,7 @@ export 'package:maplibre_platform_interface/maplibre_platform_interface.dart'
         OfflineResourceException,
         OfflineTileCountLimitException,
         OfflineTilePyramidRegionDefinition,
+        PanPhysics,
         RasterDemCustomEncoding,
         RasterDemEncoding,
         RasterDemMapboxEncoding,
@@ -159,6 +161,7 @@ export 'package:maplibre_platform_interface/maplibre_platform_interface.dart'
         VideoSourceAsset,
         VideoSourceBytes,
         VideoSourceUrls,
+        WebPanPhysics,
         degree2Radian,
         htmlColorNames;
 

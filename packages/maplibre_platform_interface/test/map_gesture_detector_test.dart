@@ -106,18 +106,66 @@ void main() {
   }
 
   group('MapGestureDetector', () {
-    testWidgets('drag pans the map', (tester) async {
-      await pumpMap(tester);
+    testWidgets('drag pans the map from where the drag was recognized with '
+        'the web physics', (tester) async {
+      await pumpMap(
+        tester,
+        gestures: const MapGestures.all(panPhysics: PanPhysics.web()),
+      );
       await tester.dragFrom(_center, const Offset(-200, 0));
       await tester.pumpAndSettle();
       expect(camera.calls.first, 'start');
       expect(camera.calls.last, 'end');
       // The scale recognizer claims the drag past its slop.
       expect(camera.panned.dx, lessThan(-150));
-      expect(camera.panned.dx, greaterThanOrEqualTo(-200));
+      expect(camera.panned.dx, greaterThan(-200));
       expect(camera.panned.dy, 0);
       expect(camera.zoomed, 0);
       expect(camera.rotated, 0);
+    });
+
+    testWidgets('drag pans the map from where the finger touched down with '
+        'the mobile physics', (tester) async {
+      await pumpMap(
+        tester,
+        gestures: const MapGestures.all(panPhysics: PanPhysics.mobile()),
+      );
+      await tester.dragFrom(_center, const Offset(-200, 0));
+      await tester.pumpAndSettle();
+      expect(camera.calls.first, 'start');
+      expect(camera.calls.last, 'end');
+      expect(camera.updates.first.panFrom, _center);
+      expect(camera.panned, const Offset(-200, 0));
+      expect(camera.zoomed, 0);
+      expect(camera.rotated, 0);
+    });
+
+    testWidgets('a drag a second finger joined and left goes on from where '
+        'the finger is, with the mobile physics', (tester) async {
+      await pumpMap(
+        tester,
+        gestures: const MapGestures.all(panPhysics: PanPhysics.mobile()),
+      );
+      final a = await tester.startGesture(_center);
+      for (var i = 0; i < 10; i++) {
+        await a.moveBy(const Offset(-5, 0));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      final b = await tester.startGesture(_center + const Offset(100, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+      await b.up();
+      await tester.pump(const Duration(milliseconds: 16));
+      final afterSecond = camera.updates.length;
+      for (var i = 0; i < 10; i++) {
+        await a.moveBy(const Offset(-5, 0));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await a.up();
+      await tester.pumpAndSettle();
+      final later = camera.updates.skip(afterSecond).where((u) => u.pans);
+      expect(later, isNotEmpty);
+      // Each move pans by the finger's step, none jumps back to the touch-down.
+      expect(later.every((u) => (u.panTo! - u.panFrom!).distance <= 5), isTrue);
     });
 
     testWidgets('fling passes the release velocity', (tester) async {

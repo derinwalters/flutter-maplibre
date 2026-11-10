@@ -1,8 +1,12 @@
+import 'dart:math';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:maplibre_platform_interface/maplibre_platform_interface.dart';
 import 'package:maplibre_platform_interface/src/widget/inherited_model.dart';
 
 part 'map_gestures.dart';
+part 'pan_physics.dart';
 
 /// The [MapOptions] class is used to set default values for the [MapLibreMap]
 /// widget.

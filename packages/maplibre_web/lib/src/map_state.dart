@@ -701,13 +701,12 @@ class _WebGestureCamera implements GestureCameraSink {
     }
   }
 
-  /// Pans on after a release at [velocity] as GL JS does, slowing down. The
-  /// fling's end reports the end of the move.
+  /// Pans on after a release at [velocity] as the map's
+  /// [MapGestures.panPhysics] carry it on, slowing down. The fling's end
+  /// reports the end of the move.
   bool _fling(Offset velocity) {
-    final speed = min(velocity.distance * _flingLinearity, _flingMaxSpeed);
-    if (speed == 0) return false;
-    final seconds = speed / (_flingDeceleration * _flingLinearity);
-    final distance = speed * seconds / 2;
+    final fling = _state.options.gestures.effectivePanPhysics.fling(velocity);
+    if (fling == null) return false;
     // The move already started with the gesture.
     _state
       .._gestureMoving = true
@@ -715,9 +714,10 @@ class _WebGestureCamera implements GestureCameraSink {
     _map.easeTo(
       interop.EaseToOptions(
         center: _map.getCenter(),
-        offset: (velocity / velocity.distance * distance).toJsPoint(),
-        duration: seconds * 1000,
-        easing: _flingCurve.transform.toJS,
+        offset: fling.offset.toJsPoint(),
+        duration:
+            fling.duration.inMicroseconds / Duration.microsecondsPerMillisecond,
+        easing: fling.curve.transform.toJS,
         essential: true,
       ),
     );
@@ -768,9 +768,3 @@ extension on _WebCamera {
     pitch: pitch,
   );
 }
-
-// The pan inertia of MapLibre GL JS.
-const _flingLinearity = 0.3;
-const _flingMaxSpeed = 1400.0;
-const _flingDeceleration = 2500.0;
-const _flingCurve = Cubic(0, 0, 0.3, 1);

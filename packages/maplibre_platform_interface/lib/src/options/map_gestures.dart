@@ -11,6 +11,7 @@ class MapGestures {
     required this.pan,
     required this.zoom,
     required this.pitch,
+    this.panPhysics,
   });
 
   /// Create a new [MapGestures] object by enabling all gestures or disabling
@@ -20,6 +21,7 @@ class MapGestures {
     this.pan = true,
     this.zoom = true,
     this.pitch = true,
+    this.panPhysics,
   });
 
   /// Create a new [MapGestures] object by disable all gestures or enabling just
@@ -29,6 +31,7 @@ class MapGestures {
     this.pan = false,
     this.zoom = false,
     this.pitch = false,
+    this.panPhysics,
   });
 
   /// Rotate the map bearing.
@@ -43,6 +46,13 @@ class MapGestures {
   /// Tilt (pitch) the map camera.
   final bool pitch;
 
+  /// How the map follows a one-finger drag and how far a flick carries it
+  /// on, or null for [PanPhysics.platform].
+  final PanPhysics? panPhysics;
+
+  /// The [panPhysics] the map pans with.
+  PanPhysics get effectivePanPhysics => panPhysics ?? PanPhysics.platform();
+
   /// Returns true if all gestures are active
   bool get allEnabled => rotate && pan && zoom && pitch;
 
@@ -54,8 +64,9 @@ class MapGestures {
           rotate == other.rotate &&
           pan == other.pan &&
           zoom == other.zoom &&
-          pitch == other.pitch;
+          pitch == other.pitch &&
+          panPhysics == other.panPhysics;
 
   @override
-  int get hashCode => Object.hash(rotate, pan, zoom, pitch);
+  int get hashCode => Object.hash(rotate, pan, zoom, pitch, panPhysics);
 }

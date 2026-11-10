@@ -768,7 +768,8 @@ class _NativeGestureCamera implements GestureCameraSink {
     );
   }
 
-  /// Continues a flick with the same pan inertia as web, in logical pixels.
+  /// Continues a flick as the map's [MapGestures.panPhysics] carry it on, in
+  /// logical pixels.
   @override
   void gestureEnd({Velocity velocity = Velocity.zero}) {
     if (!_state._gestureActive) return;
@@ -776,24 +777,30 @@ class _NativeGestureCamera implements GestureCameraSink {
       .._gestureActive = false
       .._applyDelta(const mln.CameraDelta(gesturePhase: mln.GesturePhase.end));
     const minFlingSpeed = 100.0;
-    const linearity = 0.3;
-    const maxFlingSpeed = 1400.0;
-    const deceleration = 2500.0;
     final speed = velocity.pixelsPerSecond.distance;
-    if (!speed.isFinite || speed < minFlingSpeed) {
+    final fling = speed.isFinite && speed >= minFlingSpeed
+        ? _state.options.gestures.effectivePanPhysics.fling(
+            velocity.pixelsPerSecond,
+          )
+        : null;
+    if (fling == null) {
       _state._onCameraIdle();
       return;
     }
-    final flingSpeed = min(speed * linearity, maxFlingSpeed);
-    final seconds = flingSpeed / (deceleration * linearity);
-    final offset =
-        velocity.pixelsPerSecond / speed * (flingSpeed * seconds / 2);
+    final curve = fling.curve;
     _state._applyDelta(
       mln.CameraDelta(
-        offset: MapLibreMapStateNative._screenPoint(offset),
+        offset: MapLibreMapStateNative._screenPoint(fling.offset),
         animation: mln.AnimationOptions(
-          durationMs: seconds * 1000,
-          easing: const mln.UnitBezier(x2: 0.3, y2: 1),
+          durationMs:
+              fling.duration.inMicroseconds /
+              Duration.microsecondsPerMillisecond,
+          easing: mln.UnitBezier(
+            x1: curve.a,
+            y1: curve.b,
+            x2: curve.c,
+            y2: curve.d,
+          ),
         ),
       ),
     );
