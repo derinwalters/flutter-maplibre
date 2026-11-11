@@ -210,6 +210,197 @@ void main() {
       expect(camera.endVelocity, GestureVelocity.zero);
     });
 
+    /// Spreads two fingers apart, which the pinch recognizer claims at once,
+    /// then keeps spreading them while they turn [degrees] clockwise about the
+    /// center in twenty moves. [swapped] puts the finger that went down first
+    /// on the right, so the line between them points left. [hold] is how long
+    /// the fingers rest on the map before they move.
+    Future<void> spreadAndTwist(
+      WidgetTester tester, {
+      required double degrees,
+      bool swapped = false,
+      Duration hold = Duration.zero,
+    }) async {
+      Offset arm(double radius, double angle) =>
+          Offset(radius * cos(angle), radius * sin(angle)) * (swapped ? -1 : 1);
+      final a = await tester.startGesture(_center - arm(50, 0));
+      final b = await tester.startGesture(_center + arm(50, 0));
+      if (hold > Duration.zero) await tester.pump(hold);
+      await a.moveTo(_center - arm(70, 0));
+      await b.moveTo(_center + arm(70, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+      for (var i = 1; i <= 20; i++) {
+        final radius = 70 + 40 * i / 20;
+        final angle = degrees * pi / 180 * i / 20;
+        await a.moveTo(_center - arm(radius, angle));
+        await b.moveTo(_center + arm(radius, angle));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a pinch that twists a little only zooms', (tester) async {
+      await pumpMap(tester);
+      await spreadAndTwist(tester, degrees: 8);
+      expect(camera.zoomed, greaterThan(0.5));
+      expect(camera.rotated, 0);
+      expect(camera.updates.every((u) => u.rotateBy == 0), isTrue);
+    });
+
+    testWidgets('a twist past the slop turns the map from there on', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      await spreadAndTwist(tester, degrees: 60);
+      // A clockwise twist lowers the bearing, by the twist less the 14
+      // degrees the fingers made before the map followed.
+      expect(camera.rotated, closeTo(-46, 1e-9));
+      expect(camera.zoomed, greaterThan(0.5));
+      // The map never jumps: no single move turns it by more than the
+      // fingers turned.
+      expect(camera.updates.every((u) => u.rotateBy.abs() <= 3 + 1e-9), isTrue);
+    });
+
+    testWidgets('two fingers held for five seconds still pinch and twist', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      await spreadAndTwist(
+        tester,
+        degrees: 60,
+        hold: const Duration(seconds: 5),
+      );
+      expect(camera.rotated, closeTo(-46, 1e-9));
+      expect(camera.zoomed, greaterThan(0.5));
+      expect(events.whereType<MapEventLongClick>(), isEmpty);
+    });
+
+    testWidgets(
+      'two fingers held for five seconds still only zoom for a small twist',
+      (tester) async {
+        await pumpMap(tester);
+        await spreadAndTwist(
+          tester,
+          degrees: 8,
+          hold: const Duration(seconds: 5),
+        );
+        expect(camera.zoomed, greaterThan(0.5));
+        expect(camera.rotated, 0);
+      },
+    );
+
+    testWidgets('the order the fingers went down in makes no difference', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      await spreadAndTwist(tester, degrees: 60, swapped: true);
+      expect(camera.rotated, closeTo(-46, 1e-9));
+      expect(camera.updates.every((u) => u.rotateBy.abs() <= 3 + 1e-9), isTrue);
+      camera.updates.clear();
+      await spreadAndTwist(tester, degrees: 8, swapped: true);
+      expect(camera.rotated, 0);
+    });
+
+    testWidgets('a twist the other way raises the bearing', (tester) async {
+      await pumpMap(tester);
+      await spreadAndTwist(tester, degrees: -60);
+      expect(camera.rotated, closeTo(46, 1e-9));
+    });
+
+    testWidgets('one finger held still reports a long click', (tester) async {
+      await pumpMap(tester);
+      final finger = await tester.startGesture(_center + const Offset(100, 0));
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));
+      await finger.up();
+      await tester.pumpAndSettle();
+      final click = events.whereType<MapEventLongClick>().single;
+      expect(click.point.lon, closeTo(36, 1e-9));
+      expect(click.screenPoint, _center + const Offset(100, 0));
+    });
+
+    testWidgets('two fingers held still report no long click', (tester) async {
+      await pumpMap(tester);
+      final a = await tester.startGesture(_center - const Offset(50, 0));
+      final b = await tester.startGesture(_center + const Offset(50, 0));
+      // Long enough for the long press to be recognized, were it one finger.
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 500));
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+      expect(events.whereType<MapEventLongClick>(), isEmpty);
+    });
+
+    testWidgets('a second finger that lands late still reports none', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      final a = await tester.startGesture(_center - const Offset(50, 0));
+      await tester.pump(const Duration(milliseconds: 200));
+      final b = await tester.startGesture(_center + const Offset(50, 0));
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 500));
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+      expect(events.whereType<MapEventLongClick>(), isEmpty);
+    });
+
+    testWidgets('the finger left down after a second one lifted reports none', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      final a = await tester.startGesture(_center - const Offset(50, 0));
+      final b = await tester.startGesture(_center + const Offset(50, 0));
+      await tester.pump(const Duration(milliseconds: 100));
+      await b.up();
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 500));
+      await a.up();
+      await tester.pumpAndSettle();
+      expect(events.whereType<MapEventLongClick>(), isEmpty);
+    });
+
+    testWidgets('a long press after a two-finger touch is a long click again', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      final a = await tester.startGesture(_center - const Offset(50, 0));
+      final b = await tester.startGesture(_center + const Offset(50, 0));
+      await tester.pump(const Duration(milliseconds: 100));
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+      final finger = await tester.startGesture(_center);
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));
+      await finger.up();
+      await tester.pumpAndSettle();
+      expect(events.whereType<MapEventLongClick>(), hasLength(1));
+    });
+
+    testWidgets('tilt and twist work the same after a five second hold', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      const hold = Duration(seconds: 5);
+      final a = await tester.startGesture(_center - const Offset(50, 0));
+      final b = await tester.startGesture(_center + const Offset(50, 0));
+      await tester.pump(hold);
+      for (var i = 0; i < 10; i++) {
+        await a.moveBy(const Offset(0, -10));
+        await b.moveBy(const Offset(0, -10));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+      final heldTilt = camera.pitched;
+      expect(heldTilt, closeTo(19 * 10 / 2 * 0.25, 1e-9));
+      camera.updates.clear();
+      await spreadAndTwist(tester, degrees: 60, hold: hold);
+      expect(camera.rotated, closeTo(-46, 1e-9));
+      expect(events.whereType<MapEventLongClick>(), isEmpty);
+    });
+
     testWidgets('scroll wheel zooms the map', (tester) async {
       await pumpMap(tester);
       final pointer = TestPointer(1, PointerDeviceKind.mouse);

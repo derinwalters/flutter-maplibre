@@ -29,15 +29,63 @@ const _shoveDegreesPerPixel = 0.25;
 /// tilts the map.
 const _shoveSlop = 10.0;
 
+/// Radians two fingers must twist, from where the pinch began, before the
+/// map turns with them. A pinch or a two-finger drag twists a little
+/// whatever the hand means, so a smaller turn only zooms or pans, and the
+/// bearing stays where it was. Past it the map follows the fingers from where
+/// they crossed, so it does not jump.
+const double _rotateSlop = 14 * pi / 180;
+
+/// A long press that only one finger can make.
+///
+/// The long press recognizer times the first finger alone, and when its
+/// deadline passes it wins the gesture arena over every other recognizer,
+/// whatever else has landed meanwhile. So two fingers resting on the map for
+/// half a second before a pinch, twist or tilt were a long press, and the
+/// pinch never moved the camera. A second finger landing while the hold is
+/// still pending ends it instead; once the hold has been accepted it is left
+/// as it is.
+class _OneFingerLongPressRecognizer extends LongPressGestureRecognizer {
+  _OneFingerLongPressRecognizer();
+
+  // Whether the arena has gone to the hold, which a second finger cannot
+  // take back.
+  var _held = false;
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    if (state == GestureRecognizerState.possible && !_held) {
+      resolve(GestureDisposition.rejected);
+      return;
+    }
+    super.addAllowedPointer(event);
+  }
+
+  @override
+  void acceptGesture(int pointer) {
+    _held = true;
+    super.acceptGesture(pointer);
+  }
+
+  @override
+  void didStopTrackingLastPointer(int pointer) {
+    _held = false;
+    super.didStopTrackingLastPointer(pointer);
+  }
+}
+
 /// Recognizes map gestures on [child] and hands their camera changes to
 /// [camera].
 ///
 /// Flutter hit-tests the pointers, so widgets over the map keep theirs. The
-/// gestures follow the platform conventions: a drag pans, a pinch zooms and
-/// twists, a scroll wheel and a double tap zoom, a double tap and drag zooms,
-/// two fingers side by side dragged vertically tilt, and a right-button or
-/// Ctrl + left-button mouse drag rotates and tilts. [gestures] turns them
-/// off one by one, and [movements] limits what they may change.
+/// gestures follow the platform conventions: a drag pans, a pinch zooms and,
+/// once the fingers have twisted 14 degrees, turns the map, a scroll wheel
+/// and a double tap zoom, a double tap and drag zooms, two fingers side by
+/// side dragged vertically tilt, and a right-button or Ctrl + left-button
+/// mouse drag rotates and tilts. A long click is a hold of one finger: a
+/// second finger landing during the hold ends it, and leaves the fingers to
+/// the pinch, twist or tilt. [gestures] turns them off one by one, and
+/// [movements] limits what they may change.
 class MapGestureDetector extends StatefulWidget {
   /// Creates a gesture layer over a map.
   const MapGestureDetector({
@@ -135,7 +183,14 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
 
   // Scale gesture state, relative to the previous update.
   var _lastScale = 1.0;
+
+  // The twist of the fingers: the recognizer's last rotation, the radians
+  // they have turned since the pinch began, how many of those the map has
+  // turned by, and whether they have passed [_rotateSlop].
   var _lastRotation = 0.0;
+  var _twist = 0.0;
+  var _turned = 0.0;
+  var _rotating = false;
 
   /// Whether the current scale gesture panned, which it may fling after.
   var _scalePanned = false;
@@ -274,41 +329,59 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
           ),
           null => null,
         },
-        child: GestureDetector(
+        // Always there too, for the same reason.
+        child: RawGestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTapUp: switch (widget.onClick) {
-            final onClick? => (details) => _emitUserInput(
-              details.localPosition,
-              (point, screenPoint) => onClick(
-                MapEventClick(point: point, screenPoint: screenPoint),
-              ),
-            ),
-            null => null,
+          gestures: {
+            if (widget.onLongClick case final onLongClick?)
+              _OneFingerLongPressRecognizer:
+                  GestureRecognizerFactoryWithHandlers<
+                    _OneFingerLongPressRecognizer
+                  >(
+                    _OneFingerLongPressRecognizer.new,
+                    (recognizer) =>
+                        recognizer.onLongPressStart = (details) =>
+                            _emitUserInput(
+                              details.localPosition,
+                              (point, screenPoint) => onLongClick(
+                                MapEventLongClick(
+                                  point: point,
+                                  screenPoint: screenPoint,
+                                ),
+                              ),
+                            ),
+                  ),
           },
-          onSecondaryTapUp: switch (widget.onSecondaryClick) {
-            final onSecondaryClick? => (details) => _emitUserInput(
-              details.localPosition,
-              (point, screenPoint) => onSecondaryClick(
-                MapEventSecondaryClick(point: point, screenPoint: screenPoint),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapUp: switch (widget.onClick) {
+              final onClick? => (details) => _emitUserInput(
+                details.localPosition,
+                (point, screenPoint) => onClick(
+                  MapEventClick(point: point, screenPoint: screenPoint),
+                ),
               ),
-            ),
-            null => null,
-          },
-          onLongPressStart: switch (widget.onLongClick) {
-            final onLongClick? => (details) => _emitUserInput(
-              details.localPosition,
-              (point, screenPoint) => onLongClick(
-                MapEventLongClick(point: point, screenPoint: screenPoint),
+              null => null,
+            },
+            onSecondaryTapUp: switch (widget.onSecondaryClick) {
+              final onSecondaryClick? => (details) => _emitUserInput(
+                details.localPosition,
+                (point, screenPoint) => onSecondaryClick(
+                  MapEventSecondaryClick(
+                    point: point,
+                    screenPoint: screenPoint,
+                  ),
+                ),
               ),
-            ),
-            null => null,
-          },
-          onDoubleTapDown: doubleTaps ? _onDoubleTapDown : null,
-          onDoubleTap: doubleTaps ? _onDoubleTap : null,
-          onScaleStart: scales ? _onScaleStart : null,
-          onScaleUpdate: scales ? _onScaleUpdate : null,
-          onScaleEnd: scales ? _onScaleEnd : null,
-          child: widget.child,
+              null => null,
+            },
+            onDoubleTapDown: doubleTaps ? _onDoubleTapDown : null,
+            onDoubleTap: doubleTaps ? _onDoubleTap : null,
+            onScaleStart: scales ? _onScaleStart : null,
+            onScaleUpdate: scales ? _onScaleUpdate : null,
+            onScaleEnd: scales ? _onScaleEnd : null,
+            child: widget.child,
+          ),
         ),
       ),
     );
@@ -611,6 +684,9 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
   void _onScaleStart(ScaleStartDetails details) {
     _lastScale = 1;
     _lastRotation = 0;
+    _twist = 0;
+    _turned = 0;
+    _rotating = false;
     _scalePanned = false;
     _scaleZoomed = false;
     _scaleRotated = false;
@@ -686,11 +762,31 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
     );
   }
 
+  /// The radians the map turns by for a recognizer [rotation]: none until the
+  /// fingers' twist passes [_rotateSlop], then what they turn from there on.
+  ///
+  /// The recognizer's rotation is a difference of two angles, each in
+  /// -pi..pi, so it sits a full turn off while the fingers' line crosses
+  /// pointing left. The twist adds up its changes, each taken the short way
+  /// round.
+  double _rotationBy(double rotation) {
+    final change = rotation - _lastRotation;
+    _lastRotation = rotation;
+    _twist += atan2(sin(change), cos(change));
+    if (!_rotating) {
+      if (_twist.abs() < _rotateSlop) return 0;
+      _rotating = true;
+      _turned = _rotateSlop * _twist.sign;
+    }
+    final turn = _twist - _turned;
+    _turned = _twist;
+    return turn;
+  }
+
   void _onScaleUpdate(ScaleUpdateDetails details) {
     final scale = details.scale / _lastScale;
-    final rotation = details.rotation - _lastRotation;
+    final rotation = _movements.rotate ? _rotationBy(details.rotation) : 0.0;
     _lastScale = details.scale;
-    _lastRotation = details.rotation;
     // A quick zoom, tilt, or mouse rotation drives the camera while its
     // pointers also reach the scale recognizer.
     if (_quickZooming || _shoving || _secondaryPointer != null) return;
