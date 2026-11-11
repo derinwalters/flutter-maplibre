@@ -61,7 +61,7 @@ final class MapRenderer implements FrameTargetHost {
 
   final RuntimeHandle _runtime;
   final MapHandle _map;
-  final RenderSessionHandle _session;
+  RenderSessionHandle _session;
   final FrameTarget _target;
 
   /// The Flutter texture id to show in a `Texture` widget.
@@ -90,27 +90,31 @@ final class MapRenderer implements FrameTargetHost {
     RenderedQueryGeometry geometry, {
     List<String>? layerIds,
     Object? filter,
-  }) => _session.queryRenderedFeatures(
-    geometry,
-    options: layerIds == null && filter == null
-        ? null
-        : RenderedFeatureQueryOptions(layerIds: layerIds, filter: filter),
-  );
+  }) async => _asleep
+      ? const []
+      : _session.queryRenderedFeatures(
+          geometry,
+          options: layerIds == null && filter == null
+              ? null
+              : RenderedFeatureQueryOptions(layerIds: layerIds, filter: filter),
+        );
 
   /// Queries the features that the source [sourceId] loaded for rendering.
   Future<List<SourceFeature>> querySourceFeatures(
     String sourceId, {
     List<String>? sourceLayerIds,
     Object? filter,
-  }) => _session.querySourceFeatures(
-    sourceId,
-    options: sourceLayerIds == null && filter == null
-        ? null
-        : SourceFeatureQueryOptions(
-            sourceLayerIds: sourceLayerIds,
-            filter: filter,
-          ),
-  );
+  }) async => _asleep
+      ? const []
+      : _session.querySourceFeatures(
+          sourceId,
+          options: sourceLayerIds == null && filter == null
+              ? null
+              : SourceFeatureQueryOptions(
+                  sourceLayerIds: sourceLayerIds,
+                  filter: filter,
+                ),
+        );
 
   /// The session, for queries of its latest frame, such as clusters of a
   /// GeoJSON source.
@@ -245,7 +249,8 @@ final class MapRenderer implements FrameTargetHost {
         _pendingExtent = null;
         _extent = extent;
         await onGpuQueue(() async {
-          if (!_disposed) await _target.resize(_session, extent);
+          // A sleeping renderer takes the extent when it wakes.
+          if (!_disposed && !_asleep) await _target.resize(_session, extent);
         });
       }
     } on Object catch (error) {
@@ -267,12 +272,68 @@ final class MapRenderer implements FrameTargetHost {
     if (!paused) demandFrame();
   }
 
+  /// Whether the session is closed and the texture given up, see [setAsleep].
+  bool get asleep => _asleep;
+  var _asleep = false;
+
+  /// What the last [setAsleep] asked for, which [_settle] brings the renderer
+  /// to on the GPU queue.
+  var _wantAsleep = false;
+
+  /// Called after a wake replaced the texture, so the [textureId] shown has to
+  /// change with it.
+  void Function()? onTextureChanged;
+
+  /// Puts the map to sleep, or wakes it; the last call wins however the
+  /// transitions queued before it interleave.
+  ///
+  /// Asleep, the session is closed, which frees the renderer's GPU memory, and
+  /// the texture is given up; the map keeps its style, sources and camera.
+  /// iOS freezes a suspended app, which keeps it from being killed for memory,
+  /// only while the memory it shares with the system stays under a cap of a
+  /// few dozen megabytes, and a map's GPU memory and texture are all shared:
+  /// one map kept a backgrounded app at 162 MB, and 63 MB asleep with its
+  /// texture registered. Awake again, a new session renders under a new
+  /// [textureId] from the map's loaded data.
+  void setAsleep({required bool asleep}) {
+    if (asleep == _wantAsleep) return;
+    _wantAsleep = asleep;
+    unawaited(onGpuQueue(_settle));
+  }
+
+  Future<void> _settle() async {
+    if (_disposed || _wantAsleep == _asleep) return;
+    if (_wantAsleep) {
+      _asleep = true;
+      _pendingToken = null;
+      await _target.endSession(_session);
+      await _target.shrink();
+      return;
+    }
+    final extent = this.extent;
+    await _target.grow(extent);
+    final session = _target.attach(_map, extent, Wake(callback: _drainFrames));
+    try {
+      await session.ready;
+    } on Object {
+      await _target.endSession(session);
+      rethrow;
+    }
+    _session = session;
+    _extent = extent;
+    _pendingExtent = null;
+    _asleep = false;
+    onTextureChanged?.call();
+    demandFrame();
+  }
+
   /// Arms a demand that renders the map's next update, and waits for one
   /// when there is none yet.
   @override
   void demandFrame() {
     if (_disposed ||
         _paused ||
+        _asleep ||
         _pendingToken != null ||
         !_target.acceptsFrames) {
       return;
@@ -283,7 +344,7 @@ final class MapRenderer implements FrameTargetHost {
   }
 
   void _drainFrames() {
-    if (_disposed) return;
+    if (_disposed || _asleep) return;
     RenderFrameResult? result;
     for (final candidate in _session.drainFrameResults()) {
       if (candidate.token == _pendingToken) result = candidate;
@@ -333,7 +394,7 @@ final class MapRenderer implements FrameTargetHost {
     _disposed = true;
     // A frame in presentation is released before the session goes.
     await _gpuQueue;
-    await _target.endSession(_session);
+    if (!_asleep) await _target.endSession(_session);
     await _map.release();
     await _runtime.release();
     _target.dispose();

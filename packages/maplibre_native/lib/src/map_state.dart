@@ -54,6 +54,36 @@ class MapLibreMapStateNative extends MapLibreMapState {
   /// Why the camera moves, from the start of the move on.
   CameraChangeReason _moveReason = CameraChangeReason.map;
 
+  /// Whether the app is hidden, which with [isRenderingPaused] puts the
+  /// renderer to sleep, see [MapRenderer.setAsleep].
+  bool _appHidden = switch (WidgetsBinding.instance.lifecycleState) {
+    AppLifecycleState.hidden || AppLifecycleState.paused => true,
+    _ => false,
+  };
+
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(
+      onHide: () {
+        _appHidden = true;
+        _syncSleep();
+      },
+      onShow: () {
+        _appHidden = false;
+        _syncSleep();
+      },
+    );
+  }
+
+  /// Sleeps while nobody can see the map, see [MapRenderer.setAsleep].
+  void _syncSleep() {
+    if (_disposed) return;
+    _renderer?.setAsleep(asleep: _appHidden || isRenderingPaused);
+  }
+
   /// Why the camera changes next. Runtime events arrive after the change was
   /// submitted, possibly after a short gesture already ended, so the reason
   /// is taken when the change is made.
@@ -110,7 +140,12 @@ class MapLibreMapStateNative extends MapLibreMapState {
         await renderer.dispose();
         return;
       }
-      _renderer = renderer..paused = isRenderingPaused;
+      _renderer = renderer
+        ..paused = isRenderingPaused
+        ..onTextureChanged = () {
+          if (mounted) setState(() {});
+        };
+      _syncSleep();
       setState(() {
         camera = _readCamera();
         isInitialized = true;
@@ -186,6 +221,7 @@ class MapLibreMapStateNative extends MapLibreMapState {
   @override
   void setRenderingPaused({required bool paused}) {
     _renderer?.paused = paused;
+    _syncSleep();
     // Camera animations advance only while the map renders. One that runs
     // now ends at its target, so its caller does not wait for the resume.
     final animation = _animation;
@@ -213,6 +249,7 @@ class MapLibreMapStateNative extends MapLibreMapState {
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _disposed = true;
     _animation?.end(CameraAnimationResult.cancelled);
     _animation = null;

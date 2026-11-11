@@ -44,6 +44,29 @@ final class _IoSurfaceRingTarget extends LibraryRingTarget {
   @override
   bool slotInUse(int slot) => DarwinPlugin.slotInUse(textureId, slot);
 
+  /// Whether [textureId] is registered with Flutter.
+  var _registered = true;
+
+  /// Unregisters the texture. The session that rendered into the ring is
+  /// released by then, and with it the C library's IOSurfaces, but Flutter
+  /// keeps every surface it sampled while the texture is registered, and the
+  /// plugin the one it presented last, until the texture goes.
   @override
-  void disposeTexture() => DarwinPlugin.disposeTexture(textureId);
+  Future<void> shrink() async => disposeTexture();
+
+  /// Registers a new texture for the new session, whose ring is a new one.
+  @override
+  Future<void> grow(LogicalExtent extent) async {
+    if (_registered) return;
+    textureId = DarwinPlugin.createGpuTexture();
+    ring++;
+    _registered = true;
+  }
+
+  @override
+  void disposeTexture() {
+    if (!_registered) return;
+    _registered = false;
+    DarwinPlugin.disposeTexture(textureId);
+  }
 }
