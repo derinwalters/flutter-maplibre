@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -99,6 +101,72 @@ void runTests() {
       await tester.pumpWidget(app(0));
       await tester.pump();
       expect(events.map((e) => e.paused), [true, false]);
+    });
+
+    /// A style of one background of [color].
+    MapStyle background(String color) => MapStyle.json(
+      jsonEncode({
+        'version': 8,
+        'sources': <String, Object>{},
+        'layers': [
+          {
+            'id': 'background',
+            'type': 'background',
+            'paint': {'background-color': color},
+          },
+        ],
+      }),
+    );
+
+    // A paused map releases its render session and texture, so it shows new
+    // frames in a new texture when it resumes.
+    testWidgets('shows a change made while paused on screen on resume', (
+      tester,
+    ) async {
+      final map = await pumpMap(
+        tester,
+        options: MapOptions(style: background('#ff0000')),
+      );
+      await map.waitForColorAtCenter('red', 0);
+      Future<void> show(String color, {required bool paused}) =>
+          tester.pumpWidget(
+            MapApp(
+              options: MapOptions(style: background(color)),
+              onEvent: map.events.add,
+              paused: paused,
+            ),
+          );
+      await show('#ff0000', paused: true);
+      await map.waitForEvent<MapEventRenderingChanged>(
+        where: (event) => event.paused,
+      );
+      await show('#0000ff', paused: true);
+      await tester.pump(const Duration(milliseconds: 500));
+      await show('#0000ff', paused: false);
+      await map.waitForColorAtCenter('blue', 2);
+    });
+
+    // So does every map while the app is hidden, which lets iOS freeze it.
+    testWidgets('shows its frames on screen again after the app was hidden', (
+      tester,
+    ) async {
+      final map = await pumpMap(
+        tester,
+        options: MapOptions(style: background('#ff0000')),
+      );
+      await map.waitForColorAtCenter('red', 0);
+      final binding = tester.binding;
+      binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      // Flutter draws no frame while the app is hidden, so a pump would never
+      // return; the map settles asleep meanwhile.
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await map.setOptions(MapOptions(style: background('#0000ff')));
+      await map.waitForColorAtCenter('blue', 2);
     });
   }, skip: kIsWeb);
 }

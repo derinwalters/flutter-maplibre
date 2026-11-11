@@ -29,13 +29,6 @@ const _shoveDegreesPerPixel = 0.25;
 /// tilts the map.
 const _shoveSlop = 10.0;
 
-/// Radians two fingers must twist, from where the pinch began, before the
-/// map turns with them. A pinch or a two-finger drag twists a little
-/// whatever the hand means, so a smaller turn only zooms or pans, and the
-/// bearing stays where it was. Past it the map follows the fingers from where
-/// they crossed, so it does not jump.
-const double _rotateSlop = 15 * pi / 180;
-
 /// A long press that only one finger can make.
 ///
 /// The long press recognizer times the first finger alone, and when its
@@ -79,7 +72,8 @@ class _OneFingerLongPressRecognizer extends LongPressGestureRecognizer {
 ///
 /// Flutter hit-tests the pointers, so widgets over the map keep theirs. The
 /// gestures follow the platform conventions: a drag pans, a pinch zooms and,
-/// once the fingers have twisted 15 degrees, turns the map, a scroll wheel
+/// once the fingers have twisted [MapGestures.rotationThreshold] degrees,
+/// turns the map, a scroll wheel
 /// and a double tap zoom, a double tap and drag zooms, two fingers side by
 /// side dragged vertically tilt, and a right-button or Ctrl + left-button
 /// mouse drag rotates and tilts. A long click is a hold of one finger: a
@@ -186,7 +180,7 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
 
   // The twist of the fingers: the recognizer's last rotation, the radians
   // they have turned since the pinch began, how many of those the map has
-  // turned by, and whether they have passed [_rotateSlop].
+  // turned by, and whether they have passed [MapGestures.rotationThreshold].
   var _lastRotation = 0.0;
   var _twist = 0.0;
   var _turned = 0.0;
@@ -763,7 +757,8 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
   }
 
   /// The radians the map turns by for a recognizer [rotation]: none until the
-  /// fingers' twist passes [_rotateSlop], then what they turn from there on.
+  /// fingers' twist passes [MapGestures.rotationThreshold], then what they
+  /// turn from there on.
   ///
   /// The recognizer's rotation is a difference of two angles, each in
   /// -pi..pi, so it sits a full turn off while the fingers' line crosses
@@ -774,9 +769,10 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
     _lastRotation = rotation;
     _twist += atan2(sin(change), cos(change));
     if (!_rotating) {
-      if (_twist.abs() < _rotateSlop) return 0;
+      final threshold = _gestures.rotationThreshold * pi / 180;
+      if (_twist.abs() < threshold) return 0;
       _rotating = true;
-      _turned = _rotateSlop * _twist.sign;
+      _turned = threshold * _twist.sign;
     }
     final turn = _twist - _turned;
     _turned = _twist;

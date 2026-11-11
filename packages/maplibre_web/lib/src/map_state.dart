@@ -28,6 +28,10 @@ final class MapLibreMapStateWeb extends MapLibreMapState {
   late HTMLDivElement _htmlElement;
   late interop.JsMap _map;
 
+  /// The milliseconds that label placement changes fade over while their
+  /// transitions are on: gl-js's own default, read once [_map] exists.
+  late final num _placementFadeDuration;
+
   /// maplibre-gl-js is loaded, so the platform view can create [_map].
   var _jsLoaded = false;
 
@@ -93,16 +97,20 @@ final class MapLibreMapStateWeb extends MapLibreMapState {
         // widgets over the map keep theirs.
         ..style.pointerEvents = 'none';
 
-      _map = interop.JsMap(
-        interop.MapOptions(
-          container: _htmlElement,
-          style: _jsStyle(options.style),
-          attributionControl: false,
-          // MapGestureDetector handles the input.
-          interactive: false,
-          transformRequest: _transformRequest.toJS,
-        ),
+      final mapOptions = interop.MapOptions(
+        container: _htmlElement,
+        style: _jsStyle(options.style),
+        attributionControl: false,
+        // MapGestureDetector handles the input.
+        interactive: false,
+        transformRequest: _transformRequest.toJS,
       );
+      // Left out, gl-js keeps its own default, `sans-serif`.
+      if (options.localIdeographFontFamily case final fontFamily?) {
+        mapOptions.localIdeographFontFamily = fontFamily;
+      }
+      _map = interop.JsMap(mapOptions);
+      _placementFadeDuration = _map.fadeDuration;
       _mapCreated = true;
 
       document.body?.appendChild(_htmlElement);
@@ -789,7 +797,7 @@ final class MapLibreMapStateWeb extends MapLibreMapState {
   void _onStyleLoaded() {
     layerManager = null;
     style?.dispose();
-    final styleCtrl = StyleControllerWeb(_map)..load();
+    final styleCtrl = StyleControllerWeb(_map, _placementFadeDuration)..load();
     style = styleCtrl;
     widget.onStyleLoaded?.call(styleCtrl);
     layerManager = LayerManager(styleCtrl, widget.layers);

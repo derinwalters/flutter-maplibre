@@ -7,8 +7,25 @@
   new color and text style parameters instead
   ([#671](https://github.com/josxha/flutter-maplibre/issues/671)).
 
+### Features
+
+- `StyleController.setPlacementTransitions` turns the label placement fade
+  off and on ([#611](https://github.com/josxha/flutter-maplibre/issues/611)).
+- `MapOptions.localIdeographFontFamily` draws CJK ideographs, kana and Hangul
+  with the device's fonts instead of the style's glyphs; only on iOS, macOS
+  and web ([#663](https://github.com/josxha/flutter-maplibre/issues/663)).
+- `MapGestures.rotationThreshold`: two fingers turn the map once they have
+  twisted 3 degrees, as in the iOS and Android SDKs, so a pinch that zooms
+  keeps the bearing.
+- A map releases its GPU memory and texture while it is paused or the app is
+  hidden, so iOS can freeze a backgrounded app instead of terminating it; not
+  on web.
+
 ### Bug Fixes
 
+- Two fingers resting on the map before a pinch, twist or tilt are no longer a
+  long click, which kept the pinch from moving the camera; a long click is a
+  hold of one finger.
 - Widgets around `MapLibreMap`, such as a `Listener`, get the map's pointer
   events again, and widgets behind the map no longer get its taps
   ([#675](https://github.com/josxha/flutter-maplibre/issues/675)).

@@ -7,7 +7,7 @@
 // can be linked statically into the app, whose release builds strip global
 // symbols.
 //
-// Every function takes the |engine_id| of the calling isolate,
+// Every texture function takes the |engine_id| of the calling isolate,
 // `PlatformDispatcher.instance.engineId`. Each Flutter engine registers a
 // plugin of its own, with its own texture registry, and its texture ids only
 // name textures of that engine.
@@ -58,6 +58,14 @@ bool maplibre_native_gpu_texture_slot_in_use(int64_t engine_id,
 
 // Unregisters a texture.
 void maplibre_native_dispose_texture(int64_t engine_id, int64_t texture_id);
+
+// Has the C library's local glyph rasterizer draw CJK ideographs, kana and
+// Hangul with the fonts |font_names|, one font or family name per line, in
+// the render sessions that attach from now on. `sans-serif`, `system-ui`,
+// `ui-sans-serif` and `-apple-system` name the system font. The rasterizer
+// reads its fonts from the `MLNIdeographicFontFamilyName` user default alone,
+// which this registers for the process.
+void maplibre_native_set_local_ideograph_fonts(const char* font_names);
 
 #if defined(__cplusplus)
 }  // extern "C"
