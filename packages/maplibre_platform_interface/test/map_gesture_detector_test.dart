@@ -254,9 +254,9 @@ void main() {
     ) async {
       await pumpMap(tester);
       await spreadAndTwist(tester, degrees: 60);
-      // A clockwise twist lowers the bearing, by the twist less the 14
+      // A clockwise twist lowers the bearing, by the twist less the 15
       // degrees the fingers made before the map followed.
-      expect(camera.rotated, closeTo(-46, 1e-9));
+      expect(camera.rotated, closeTo(-45, 1e-9));
       expect(camera.zoomed, greaterThan(0.5));
       // The map never jumps: no single move turns it by more than the
       // fingers turned.
@@ -272,7 +272,7 @@ void main() {
         degrees: 60,
         hold: const Duration(seconds: 5),
       );
-      expect(camera.rotated, closeTo(-46, 1e-9));
+      expect(camera.rotated, closeTo(-45, 1e-9));
       expect(camera.zoomed, greaterThan(0.5));
       expect(events.whereType<MapEventLongClick>(), isEmpty);
     });
@@ -296,7 +296,7 @@ void main() {
     ) async {
       await pumpMap(tester);
       await spreadAndTwist(tester, degrees: 60, swapped: true);
-      expect(camera.rotated, closeTo(-46, 1e-9));
+      expect(camera.rotated, closeTo(-45, 1e-9));
       expect(camera.updates.every((u) => u.rotateBy.abs() <= 3 + 1e-9), isTrue);
       camera.updates.clear();
       await spreadAndTwist(tester, degrees: 8, swapped: true);
@@ -306,7 +306,7 @@ void main() {
     testWidgets('a twist the other way raises the bearing', (tester) async {
       await pumpMap(tester);
       await spreadAndTwist(tester, degrees: -60);
-      expect(camera.rotated, closeTo(46, 1e-9));
+      expect(camera.rotated, closeTo(45, 1e-9));
     });
 
     testWidgets('one finger held still reports a long click', (tester) async {
@@ -397,7 +397,7 @@ void main() {
       expect(heldTilt, closeTo(19 * 10 / 2 * 0.25, 1e-9));
       camera.updates.clear();
       await spreadAndTwist(tester, degrees: 60, hold: hold);
-      expect(camera.rotated, closeTo(-46, 1e-9));
+      expect(camera.rotated, closeTo(-45, 1e-9));
       expect(events.whereType<MapEventLongClick>(), isEmpty);
     });
 
