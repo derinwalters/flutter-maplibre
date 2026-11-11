@@ -24,6 +24,7 @@ class MapGestures {
     this.doubleTapDrag = true,
     this.secondaryDrag = true,
     this.twoFingerDrag = true,
+    this.rotationThreshold = 3,
   });
 
   /// Turns every gesture off by default.
@@ -38,6 +39,7 @@ class MapGestures {
     this.doubleTapDrag = false,
     this.secondaryDrag = false,
     this.twoFingerDrag = false,
+    this.rotationThreshold = 3,
   });
 
   /// Drag one finger or the mouse to pan.
@@ -67,6 +69,15 @@ class MapGestures {
   /// Drag two fingers side by side up or down to tilt.
   final bool twoFingerDrag;
 
+  /// The degrees that two fingers twist, from where a [pinch] began, before
+  /// the map turns with them, 3 by default as in the iOS and Android SDKs.
+  ///
+  /// A pinch or a two-finger drag twists a little whatever the hand means, so
+  /// a smaller twist only zooms or pans and leaves the bearing. Past it the
+  /// map turns with the fingers from where they crossed it, without a jump. 0
+  /// turns the map with every twist.
+  final double rotationThreshold;
+
   /// A copy with the given gestures replaced.
   MapGestures copyWith({
     bool? drag,
@@ -77,6 +88,7 @@ class MapGestures {
     bool? doubleTapDrag,
     bool? secondaryDrag,
     bool? twoFingerDrag,
+    double? rotationThreshold,
   }) => MapGestures(
     drag: drag ?? this.drag,
     fling: fling ?? this.fling,
@@ -86,6 +98,7 @@ class MapGestures {
     doubleTapDrag: doubleTapDrag ?? this.doubleTapDrag,
     secondaryDrag: secondaryDrag ?? this.secondaryDrag,
     twoFingerDrag: twoFingerDrag ?? this.twoFingerDrag,
+    rotationThreshold: rotationThreshold ?? this.rotationThreshold,
   );
 
   @override
@@ -99,7 +112,8 @@ class MapGestures {
           doubleTap == other.doubleTap &&
           doubleTapDrag == other.doubleTapDrag &&
           secondaryDrag == other.secondaryDrag &&
-          twoFingerDrag == other.twoFingerDrag;
+          twoFingerDrag == other.twoFingerDrag &&
+          rotationThreshold == other.rotationThreshold;
 
   @override
   int get hashCode => Object.hash(
@@ -111,6 +125,7 @@ class MapGestures {
     doubleTapDrag,
     secondaryDrag,
     twoFingerDrag,
+    rotationThreshold,
   );
 
   @override
@@ -118,5 +133,5 @@ class MapGestures {
       'MapGestures(drag: $drag, fling: $fling, pinch: $pinch, '
       'scrollWheel: $scrollWheel, doubleTap: $doubleTap, '
       'doubleTapDrag: $doubleTapDrag, secondaryDrag: $secondaryDrag, '
-      'twoFingerDrag: $twoFingerDrag)';
+      'twoFingerDrag: $twoFingerDrag, rotationThreshold: $rotationThreshold)';
 }

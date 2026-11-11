@@ -68,3 +68,18 @@ that allows to customize existing styles or create a new style from scratch.
 Other tile providers like MapBox have own editors you can use.
 
 ![Maputnik Editor](../assets/images/maputnik.jpg)
+## Label placement transitions
+
+Labels fade in and out over 300 ms as their collisions with other labels
+change, and every change restarts the fade. A map whose GeoJSON source
+updates several times a second, such as a moving marker, keeps rendering for
+that. `setPlacementTransitions` turns the fade off, so labels show and hide
+at once, and each update needs a single frame:
+
+```dart
+MapLibreMap(
+  onStyleLoaded: (style) => style.setPlacementTransitions(enabled: false),
+)
+```
+
+A newly loaded style has them on again.

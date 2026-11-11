@@ -72,6 +72,21 @@ Each entry: the decision, then why.
   the external memory extensions the GPU has. On Linux the plugin allocates
   its ring images on it through the functions of its context.
 
+- **A map sleeps while it is paused or the app is hidden.**
+  `MapRenderer.setAsleep` releases the render session, which frees the
+  renderer's GPU memory, and the target gives up its texture; the map keeps
+  its style, sources and camera, and a new session attaches under a new
+  texture id when it wakes. Sleep is a wanted state that the renderer
+  settles to on its GPU queue, so the last call wins however queued
+  transitions interleave. iOS freezes a suspended app, which keeps it from
+  being terminated for memory, only while its dirty shared memory stays under
+  a small cap (`vm_map_freeze`, about 76 MB on a 6 GB iPhone), and a map's GPU
+  memory and texture are all shared: one paused map left a backgrounded app at
+  162.6 MB shared, 104 MB of it the renderer's (0.4.0-pre.1, plugin-allocated
+  ring; not measured again on the library's ring). On iOS and macOS the target
+  unregisters its texture, as Flutter keeps every surface it sampled while it
+  is registered; the other targets keep theirs.
+
 ## Windows
 
 - **The session renders into the library's ring of three DXGI shared
@@ -506,6 +521,24 @@ Each entry: the decision, then why.
   UI thread (`geojsonSourceDataCreate` is synchronous) and re-tiles the
   source; a paint change does none of that.
 
+- **`MapOptions.localIdeographFontFamily` is a per-map CSS font-family list,
+  as gl-js's option.** Null keeps each platform's default (web: gl-js's
+  `sans-serif`; iOS and macOS: the style's glyphs). On iOS and macOS the C
+  library's local glyph rasterizer reads its fonts from the
+  `MLNIdeographicFontFamilyName` user default when a session attaches (the
+  C API passes none, see Known gaps), so the Darwin target registers the
+  names just before every attach, waking included, in the registration
+  domain, which is the process's and never written to disk. A generic
+  sans-serif family stands for the system font, whose fallbacks pick the CJK
+  face of the device's language. The other native libraries have no local
+  rasterizer.
+- **`StyleController.setPlacementTransitions` mirrors the C API's
+  `StyleTransitionOptions.enablePlacementTransitions`.** Native keeps the
+  style's transition duration and delay. gl-js only takes `fadeDuration` as
+  a constructor option and keeps it in the private `_fadeDuration`, which it
+  reads on every frame, so web sets that field: 0 off, the map's own value
+  on. A newly loaded style has them on again on both platforms.
+
 ## Gestures
 
 - **Two options decide what gestures do: `MapOptions.movements`
@@ -691,6 +724,14 @@ Each entry: the decision, then why.
   early when it is alone there. The detector gives its semantics the long
   press action itself, as the default semantics only find Flutter's own
   recognizer.
+- **Two fingers turn the map only once they have twisted
+  `MapGestures.rotationThreshold` degrees from where the pinch began, 3 by
+  default as in the iOS and Android SDKs.** A pinch or a two-finger drag
+  twists a little whatever the hand means. Past the threshold the map turns
+  from where the fingers crossed it, so it does not jump. The recognizer's
+  rotation is a difference of two angles in -pi..pi, a full turn off while
+  the fingers' line points left, so the twist adds up its changes the short
+  way round.
 
 ## Tests
 
@@ -765,6 +806,12 @@ Each entry: the decision, then why.
   the move. Hit testing of annotation layers therefore ranks hits by the
   index in `style.layers`, and the integration test checks the order by
   color.
+- `maplibre_native_ffi` has no local font option, although MapLibre Native's
+  renderer takes a local font family. On iOS and macOS the local glyph
+  rasterizer also reads the `MLNIdeographicFontFamilyName` user default,
+  which `localIdeographFontFamily` sets; it is the process's, so a map
+  created later without the option draws with the last fonts set. Android,
+  Windows and Linux draw the style's glyphs.
 - MapLibre Native moves to the style's camera on load only while no camera
   change happened, and `mln_map_set_bounds` counts as one (it always passes
   bounds, even `unbounded`). The C API has no getter for the style's camera.

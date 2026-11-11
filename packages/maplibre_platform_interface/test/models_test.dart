@@ -44,6 +44,19 @@ void main() {
     });
   });
 
+  group('MapOptions', () {
+    test('keep the platform fonts for CJK by default', () {
+      expect(const MapOptions().localIdeographFontFamily, isNull);
+    });
+
+    test('compare their local ideograph fonts', () {
+      const local = MapOptions(localIdeographFontFamily: 'sans-serif');
+      expect(local, const MapOptions(localIdeographFontFamily: 'sans-serif'));
+      expect(local.hashCode, isNot(const MapOptions().hashCode));
+      expect(local, isNot(const MapOptions()));
+    });
+  });
+
   group('CameraUpdate', () {
     const bounds = GeoBox(west: -10, south: -5, east: 10, north: 5);
 

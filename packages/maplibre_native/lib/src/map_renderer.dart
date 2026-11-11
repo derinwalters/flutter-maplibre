@@ -24,8 +24,12 @@ Map<String, RenderBackendFlag> _pluginBackends() {
   return {'Vulkan': RenderBackendFlag.vulkan};
 }
 
-/// Creates the frame target of the current platform.
-FrameTarget _createTarget(LogicalExtent extent) {
+/// Creates the frame target of the current platform. Only iOS and macOS draw
+/// CJK ideographs, kana and Hangul with [localIdeographFontFamily].
+FrameTarget _createTarget(
+  LogicalExtent extent, {
+  String? localIdeographFontFamily,
+}) {
   final mask = supportedRenderBackendMask();
   final backends = _pluginBackends();
   if (!backends.values.any(mask.contains)) {
@@ -37,7 +41,12 @@ FrameTarget _createTarget(LogicalExtent extent) {
     );
   }
   if (Platform.isAndroid) return createAndroidTarget(extent);
-  if (Platform.isIOS || Platform.isMacOS) return createDarwinTarget(extent);
+  if (Platform.isIOS || Platform.isMacOS) {
+    return createDarwinTarget(
+      extent,
+      localIdeographFontFamily: localIdeographFontFamily,
+    );
+  }
   return createDesktopTarget(extent);
 }
 
@@ -143,14 +152,16 @@ final class MapRenderer implements FrameTargetHost {
   onFrameShown;
 
   /// Creates a renderer of [extent] whose map queues the events of
-  /// [eventMask] and decodes FastPFOR in MLT tiles if [fastPforEnabled].
-  /// [setUp] submits the map's first commands, such as its
-  /// camera and style, which the map runs once it is created and before the
-  /// session renders its first frame.
+  /// [eventMask], decodes FastPFOR in MLT tiles if [fastPforEnabled] and
+  /// draws CJK ideographs, kana and Hangul with [localIdeographFontFamily]
+  /// where the platform can. [setUp] submits the map's first commands, such
+  /// as its camera and style, which the map runs once it is created and
+  /// before the session renders its first frame.
   static Future<MapRenderer> create({
     required LogicalExtent extent,
     RuntimeEventFlag? eventMask,
     bool fastPforEnabled = false,
+    String? localIdeographFontFamily,
     Future<void> Function(MapHandle map)? setUp,
     void Function(RuntimeEvent event)? onEvent,
     void Function(MapProjectionHandle projection, RenderFrameResult frame)?
@@ -158,7 +169,10 @@ final class MapRenderer implements FrameTargetHost {
   }) async {
     // Also initializes the platform's graphics context, which Android needs
     // before the C library's first use.
-    final target = _createTarget(extent);
+    final target = _createTarget(
+      extent,
+      localIdeographFontFamily: localIdeographFontFamily,
+    );
 
     // Wakes can arrive before the renderer exists; their work waits for the
     // next wake then. Events are delivered once, so the ones that arrive

@@ -163,6 +163,8 @@ static const MaplibreNativeSymbol kSymbols[] = {
     {"maplibre_native_gpu_texture_slot_in_use",
      (void *)&maplibre_native_gpu_texture_slot_in_use},
     {"maplibre_native_dispose_texture", (void *)&maplibre_native_dispose_texture},
+    {"maplibre_native_set_local_ideograph_fonts",
+     (void *)&maplibre_native_set_local_ideograph_fonts},
     {NULL, NULL},
 };
 
@@ -213,32 +215,6 @@ static MaplibreNativePlugin *_Nullable FindPlugin(int64_t engine_id, char *error
   return plugin;
 }
 
-/// Hands Info.plist's MLNIdeographicFontFamilyName to the C library's local
-/// glyph rasterizer, which reads its fonts from the user defaults alone, as the
-/// iOS and macOS SDKs honoured the key: a font name, a list of them, or YES for
-/// the system font, whose cascade picks the CJK face of the device's language.
-/// Without it every CJK, kana and Hangul glyph is downloaded from the style's
-/// glyph server, range by range.
-static void RegisterIdeographicFonts(void) {
-  static NSString *const kKey = @"MLNIdeographicFontFamilyName";
-  id value = [NSBundle.mainBundle objectForInfoDictionaryKey:kKey];
-  NSArray<NSString *> *names = nil;
-  if ([value isKindOfClass:NSString.class]) {
-    names = @[ value ];
-  } else if ([value isKindOfClass:NSArray.class]) {
-    names = value;
-  } else if ([value isKindOfClass:NSNumber.class] && [value boolValue]) {
-#if TARGET_OS_OSX
-    names = @[ [NSFont systemFontOfSize:0].fontName ];
-#else
-    names = @[ [UIFont systemFontOfSize:0].fontName ];
-#endif
-  }
-  if (names.count > 0) {
-    [NSUserDefaults.standardUserDefaults registerDefaults:@{kKey : names}];
-  }
-}
-
 @implementation MaplibreNativePlugin
 
 + (void)initialize {
@@ -249,7 +225,6 @@ static void RegisterIdeographicFonts(void) {
 }
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
-  RegisterIdeographicFonts();
   // The engine keeps the instance it publishes, and Dart finds it there.
   [registrar publish:[[MaplibreNativePlugin alloc] initWithRegistry:[registrar textures]]];
 }
@@ -349,4 +324,31 @@ void maplibre_native_dispose_texture(int64_t engine_id, int64_t texture_id) {
   RunOnMain(^{
     [registry unregisterTexture:texture_id];
   });
+}
+
+/// Whether |name| is a CSS generic family that the system font stands for.
+static BOOL IsSystemFamily(NSString *name) {
+  static NSSet<NSString *> *families;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    families = [NSSet setWithArray:@[ @"sans-serif", @"system-ui", @"ui-sans-serif", @"-apple-system" ]];
+  });
+  return [families containsObject:name.lowercaseString];
+}
+
+void maplibre_native_set_local_ideograph_fonts(const char *font_names) {
+  NSMutableArray<NSString *> *names = [NSMutableArray array];
+  for (NSString *name in [@(font_names) componentsSeparatedByString:@"\n"]) {
+    if (name.length == 0) continue;
+#if TARGET_OS_OSX
+    [names addObject:IsSystemFamily(name) ? [NSFont systemFontOfSize:0].fontName : name];
+#else
+    [names addObject:IsSystemFamily(name) ? [UIFont systemFontOfSize:0].fontName : name];
+#endif
+  }
+  if (names.count == 0) return;
+  // The registration domain is the app's and lives as long as the process, so
+  // nothing is written to its preferences on disk.
+  [NSUserDefaults.standardUserDefaults
+      registerDefaults:@{@"MLNIdeographicFontFamilyName" : names}];
 }

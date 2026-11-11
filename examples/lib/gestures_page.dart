@@ -16,6 +16,9 @@ class _GesturesPageState extends State<GesturesPage> {
     Gestures.values.map((e) => MapEntry(e, false)),
   );
 
+  /// The degrees two fingers twist before the map turns with them.
+  double _rotationThreshold = const MapGestures().rotationThreshold;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,9 +43,27 @@ class _GesturesPageState extends State<GesturesPage> {
                   .toList(growable: false),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Text('Rotation threshold ${_rotationThreshold.round()}°'),
+                Expanded(
+                  child: Slider(
+                    value: _rotationThreshold,
+                    max: 30,
+                    divisions: 30,
+                    onChanged: (value) =>
+                        setState(() => _rotationThreshold = value),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: MapLibreMap(
               options: MapOptions(
+                gestures: MapGestures(rotationThreshold: _rotationThreshold),
                 movements: MapMovements(
                   rotate: _selections[Gestures.rotate]!,
                   pan: _selections[Gestures.pan]!,
