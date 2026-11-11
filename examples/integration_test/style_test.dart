@@ -1019,6 +1019,80 @@ void runTests() {
         'background',
       ]);
     }, skip: kIsWeb);
+
+    /// A style of one label, 東京, whose glyph server refuses every request,
+    /// so that only the device's fonts can draw it.
+    MapOptions cjkLabel({String? localIdeographFontFamily}) => MapOptions(
+      style: MapStyle.json(
+        jsonEncode({
+          'version': 8,
+          'glyphs': 'http://127.0.0.1:9/{fontstack}/{range}.pbf',
+          'sources': {
+            'point': {
+              'type': 'geojson',
+              'data': {
+                'type': 'Point',
+                'coordinates': [0, 0],
+              },
+            },
+          },
+          'layers': [
+            {
+              'id': 'label',
+              'type': 'symbol',
+              'source': 'point',
+              'layout': {
+                'text-field': '東京',
+                'text-font': ['Noto Sans Regular'],
+              },
+            },
+          ],
+        }),
+      ),
+      initCamera: const CameraUpdate.position(
+        center: Geographic(lon: 0, lat: 0),
+        zoom: 4,
+      ),
+      localIdeographFontFamily: localIdeographFontFamily,
+    );
+
+    final darwin =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS);
+
+    // First: on iOS and macOS the fonts are the app's once a map set them.
+    testWidgets('draws no CJK label without glyphs or local fonts', (
+      tester,
+    ) async {
+      final map = await pumpMap(tester, options: cjkLabel());
+      // A map whose glyphs fail to load never goes idle; the failure is the
+      // last thing the label waits for.
+      await map.waitForEvent<MapEventError>(
+        where: (event) => event.kind == MapErrorKind.glyphs,
+      );
+      await map.waitForLatestFrame();
+      final features = await map.pumpFuture(
+        map.controller.queryRenderedFeatures(
+          QueryGeometry.point(map.center),
+          layerIds: ['label'],
+        ),
+        reason: 'querying the label',
+      );
+      expect(features, isEmpty);
+    }, skip: !darwin);
+
+    testWidgets('draws CJK labels with the device fonts', (tester) async {
+      final map = await pumpMap(
+        tester,
+        options: cjkLabel(localIdeographFontFamily: 'sans-serif'),
+      );
+      await map.waitForFeatures(
+        map.center,
+        (features) => features.isNotEmpty,
+        layerIds: ['label'],
+      );
+    }, skip: !(kIsWeb || darwin));
   });
 }
 
