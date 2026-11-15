@@ -102,6 +102,7 @@ class MapLibreMapStateNative extends MapLibreMapState {
         extent: extent,
         eventMask: _eventMask = widget.eventMask,
         fastPforEnabled: options.fastPforEnabled,
+        localIdeographFontFamily: options.localIdeographFontFamily,
         setUp: _setUp,
         onEvent: _onRuntimeEvent,
         onFrameShown: _onFrameShown,

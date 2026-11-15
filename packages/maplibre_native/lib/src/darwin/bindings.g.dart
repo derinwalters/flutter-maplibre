@@ -115,6 +115,20 @@ class MaplibreNativeDarwinBindings {
               int,
             )
           >();
+
+  void maplibre_native_set_local_ideograph_fonts(
+    ffi.Pointer<ffi.Char> font_names,
+  ) {
+    return _maplibre_native_set_local_ideograph_fonts(font_names);
+  }
+
+  late final _maplibre_native_set_local_ideograph_fontsPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Char>)>>(
+        'maplibre_native_set_local_ideograph_fonts',
+      );
+  late final _maplibre_native_set_local_ideograph_fonts =
+      _maplibre_native_set_local_ideograph_fontsPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Char>)>();
 }
 
 final class MaplibreNativeSymbol extends ffi.Struct {

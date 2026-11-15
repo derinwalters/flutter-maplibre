@@ -20,6 +20,7 @@ let package = Package(
                 .headerSearchPath("include/maplibre_native"),
             ],
             linkerSettings: [
+                .linkedFramework("CoreText"),
                 .linkedFramework("CoreVideo"),
                 .linkedFramework("IOSurface"),
             ]

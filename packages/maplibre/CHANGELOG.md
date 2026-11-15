@@ -25,6 +25,9 @@
   ([#674](https://github.com/maplibre/flutter-maplibre/issues/674)).
 - `LayerFeatureEvent.feature` is the feature that a tap, hover or drag hit
   ([#674](https://github.com/maplibre/flutter-maplibre/issues/674)).
+- `MapOptions.localIdeographFontFamily` draws CJK ideographs, kana and Hangul
+  with the device's fonts instead of the style's glyphs; only on iOS, macOS
+  and web ([#663](https://github.com/maplibre/flutter-maplibre/issues/663)).
 
 ### Bug Fixes
 

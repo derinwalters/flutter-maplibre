@@ -193,6 +193,21 @@ void main() {
     test('leaves FastPFOR decoding off by default, as MapLibre Native', () {
       expect(const MapOptions().fastPforEnabled, isFalse);
     });
+
+    test('keeps the platform fonts for CJK by default', () {
+      expect(const MapOptions().localIdeographFontFamily, isNull);
+    });
+
+    test('compares the local ideograph fonts', () {
+      const local = MapOptions(localIdeographFontFamily: 'sans-serif');
+      expect(local, const MapOptions(localIdeographFontFamily: 'sans-serif'));
+      expect(
+        local.hashCode,
+        const MapOptions(localIdeographFontFamily: 'sans-serif').hashCode,
+      );
+      expect(local, isNot(const MapOptions()));
+      expect(local, isNot(const MapOptions(localIdeographFontFamily: 'serif')));
+    });
   });
 
   group('CameraPosition', () {

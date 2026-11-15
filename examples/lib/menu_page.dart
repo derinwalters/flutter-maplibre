@@ -12,6 +12,7 @@ import 'package:maplibre_example/layers_mixed_page.dart';
 import 'package:maplibre_example/layers_polygon_page.dart';
 import 'package:maplibre_example/layers_polyline_page.dart';
 import 'package:maplibre_example/layers_widget_marker_page.dart';
+import 'package:maplibre_example/local_cjk_fonts_page.dart';
 import 'package:maplibre_example/offline_page.dart';
 import 'package:maplibre_example/parameters_page.dart';
 import 'package:maplibre_example/paused_rendering_page.dart';
@@ -65,6 +66,11 @@ class MenuPage extends StatelessWidget {
                           label: 'Translucent Map',
                           iconData: Icons.map_outlined,
                           location: TranslucentMapPage.location,
+                        ),
+                        const ItemCard(
+                          label: 'Local CJK Fonts',
+                          iconData: Icons.translate,
+                          location: LocalCjkFontsPage.location,
                         ),
                         const ItemCard(
                           label: 'PMTiles Source',

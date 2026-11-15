@@ -505,6 +505,19 @@ Each entry: the decision, then why.
   update per frame re-encodes the data in Dart, parses and indexes it on the
   UI thread (`geojsonSourceDataCreate` is synchronous) and re-tiles the
   source; a paint change does none of that.
+- **`MapOptions.localIdeographFontFamily` is a per-map CSS font-family list,
+  as gl-js's option.** Null keeps each platform's default (web: gl-js's
+  `sans-serif`; iOS and macOS: the style's glyphs). On iOS and macOS the C
+  library's local glyph rasterizer reads its fonts from the
+  `MLNIdeographicFontFamilyName` user default when the session's renderer
+  is created, on its first frame (the C API passes none, see Known gaps), so
+  the Darwin target registers the names just before the session attaches,
+  in the registration domain, which is the process's and never written to
+  disk. A generic sans-serif family stands for the system font's family, as
+  MapLibre's iOS and macOS SDKs pass it by default, and the plugin reads it
+  through Core Text, which any thread may call. The rasterizer puts the
+  layer's `text-font` names before these. The other native platforms have
+  no local rasterizer.
 
 ## Gestures
 
@@ -765,6 +778,13 @@ Each entry: the decision, then why.
   the move. Hit testing of annotation layers therefore ranks hits by the
   index in `style.layers`, and the integration test checks the order by
   color.
+- `maplibre_native_ffi` has no local font option, although MapLibre Native's
+  renderer takes a local font family. On iOS and macOS the local glyph
+  rasterizer also reads the `MLNIdeographicFontFamilyName` user default,
+  which `localIdeographFontFamily` sets; it is the process's, so a map
+  created later without the option draws with the last fonts set, and maps
+  created at the same time with different fonts may draw with each other's.
+  Android, Windows and Linux draw the style's glyphs.
 - MapLibre Native moves to the style's camera on load only while no camera
   change happened, and `mln_map_set_bounds` counts as one (it always passes
   bounds, even `unbounded`). The C API has no getter for the style's camera.

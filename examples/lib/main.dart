@@ -12,6 +12,7 @@ import 'package:maplibre_example/layers_mixed_page.dart';
 import 'package:maplibre_example/layers_polygon_page.dart';
 import 'package:maplibre_example/layers_polyline_page.dart';
 import 'package:maplibre_example/layers_widget_marker_page.dart';
+import 'package:maplibre_example/local_cjk_fonts_page.dart';
 import 'package:maplibre_example/menu_page.dart';
 import 'package:maplibre_example/offline_page.dart';
 import 'package:maplibre_example/parameters_page.dart';
@@ -57,6 +58,7 @@ class MyApp extends StatelessWidget {
       routes: {
         MenuPage.location: (context) => const MenuPage(),
         TranslucentMapPage.location: (context) => const TranslucentMapPage(),
+        LocalCjkFontsPage.location: (context) => const LocalCjkFontsPage(),
         PmTilesPage.location: (context) => const PmTilesPage(),
         KioskPage.location: (context) => const KioskPage(),
         AnimationPage.location: (context) => const AnimationPage(),

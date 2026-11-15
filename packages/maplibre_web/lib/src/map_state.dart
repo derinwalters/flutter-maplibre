@@ -93,16 +93,20 @@ final class MapLibreMapStateWeb extends MapLibreMapState {
         // widgets over the map keep theirs.
         ..style.pointerEvents = 'none';
 
-      _map = interop.JsMap(
-        interop.MapOptions(
-          container: _htmlElement,
-          style: _jsStyle(options.style),
-          attributionControl: false,
-          // MapGestureDetector handles the input.
-          interactive: false,
-          transformRequest: _transformRequest.toJS,
-        ),
+      final mapOptions = interop.MapOptions(
+        container: _htmlElement,
+        style: _jsStyle(options.style),
+        attributionControl: false,
+        // MapGestureDetector handles the input.
+        interactive: false,
+        transformRequest: _transformRequest.toJS,
       );
+      // Left out, gl-js keeps its own default, `sans-serif`; an empty string
+      // draws the style's glyphs.
+      if (options.localIdeographFontFamily case final fontFamily?) {
+        mapOptions.localIdeographFontFamily = fontFamily.trim();
+      }
+      _map = interop.JsMap(mapOptions);
       _mapCreated = true;
 
       document.body?.appendChild(_htmlElement);
