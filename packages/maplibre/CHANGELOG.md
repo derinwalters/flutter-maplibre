@@ -29,6 +29,11 @@
   with the device's fonts instead of the style's glyphs, on by default with
   `'sans-serif'`; null draws the style's glyphs. Only on iOS, macOS and web
   ([#663](https://github.com/maplibre/flutter-maplibre/issues/663)).
+- `StyleController.setPlacementTransitions` turns the fade of labels whose
+  placement changes off and on
+  ([#611](https://github.com/maplibre/flutter-maplibre/issues/611)).
+- A pinch rotates the map only after its fingers twist 15 degrees, set with
+  `MapGestures.rotateThreshold`.
 
 ### Bug Fixes
 

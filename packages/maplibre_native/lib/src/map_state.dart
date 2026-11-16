@@ -787,6 +787,8 @@ class MapLibreMapStateNative extends MapLibreMapState {
     if (map == null) return;
     final request = ++_styleRequest;
     bool stale() => _map != map || request != _styleRequest;
+    this.style?.markReplaced();
+    _loadingStyle?.markReplaced();
     detachAnnotations();
     final Future<mln.CommandCompletion> load;
     switch (style) {

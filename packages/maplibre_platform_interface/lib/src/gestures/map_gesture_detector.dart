@@ -208,6 +208,11 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
   // after, how far it did, and where its fingers were last.
   var _scaleZoomed = false;
   var _scaleRotated = false;
+
+  /// Radians that the fingers of a pinch twisted before they passed
+  /// [MapGestures.rotateThreshold], and whether they passed it.
+  var _pinchTwist = 0.0;
+  var _pinchTwistPassed = false;
   var _pinchZoom = 0.0;
   var _pinchRotation = 0.0;
   Offset? _pinchFocal;
@@ -709,6 +714,8 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
     _scalePanned = false;
     _scaleZoomed = false;
     _scaleRotated = false;
+    _pinchTwist = 0;
+    _pinchTwistPassed = false;
     _pinchZoom = 0;
     _pinchRotation = 0;
     _pinchFocal = null;
@@ -833,7 +840,15 @@ class _MapGestureDetectorState extends State<MapGestureDetector> {
         pan != Offset.zero;
     final zooms =
         movements.zoom && pinches && scale != 1 && scale.isFinite && scale > 0;
-    final rotates = movements.rotate && pinches && rotation != 0;
+    var rotates = movements.rotate && pinches && rotation != 0;
+    if (rotates && !_pinchTwistPassed) {
+      // The twist below the threshold is dropped, so the map doesn't jump
+      // when it passes, and the step that passes it rotates already.
+      _pinchTwist += rotation;
+      _pinchTwistPassed =
+          _pinchTwist.abs() * 180 / pi >= gestures.rotateThreshold;
+      rotates = _pinchTwistPassed;
+    }
     if (!pans && !zooms && !rotates) return;
     final zoomBy = zooms ? log(scale) / ln2 : 0.0;
     // A clockwise twist is a positive rotation in Flutter and turns the map

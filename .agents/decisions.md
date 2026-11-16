@@ -522,6 +522,17 @@ Each entry: the decision, then why.
   Text, which any thread may call; other generic families reach Core Text
   as literal names. The rasterizer puts the layer's `text-font` names before
   these. The other native platforms have no local rasterizer.
+- **`StyleController.setPlacementTransitions` mirrors the C API's
+  `StyleTransitionOptions.enablePlacementTransitions`.** Native keeps the
+  style's transition duration and delay. gl-js only takes `fadeDuration` as
+  a constructor option and keeps it in the private `_fadeDuration`, which it
+  reads on every frame, so web sets that field: 0 off, the map's own value
+  on. Honouring it only when the map is created would make the switch do
+  nothing on web afterwards; the integration test fails if gl-js renames the
+  field. A newly loaded style has them on again on both platforms. Native
+  fades over the style's transition duration, web over the map's 300 ms,
+  which gl-js also times pattern and dash crossfades with, so off ends those
+  too on web.
 
 ## Gestures
 
@@ -698,6 +709,16 @@ Each entry: the decision, then why.
   wheel delta by the device pixel ratio except on macOS, so the recognizer
   multiplies it back); a trackpad pinch that arrives as a scale signal
   zooms by its scale.
+- **A pinch rotates only after its fingers twist
+  `MapGestures.rotateThreshold` degrees (default 15) since it started.** The
+  twist below it is dropped, so the map doesn't jump; zoom and pan are never
+  held back. GL JS waits for 25 px along the circle of the fingers (about 14°
+  at 200 px apart); MapLibre Android waits 3° to 15° depending on speed and
+  turns rotation off once a zoom starts first; iOS waits 3° while zooming;
+  flutter_map waits 20° only with `enableMultiFingerGestureRace`, where the
+  first gesture past its threshold locks the others out. A fixed angle is
+  easier to explain and set than GL JS's distance, and locking rotation out
+  after a zoom would make zooming and turning at once impossible.
 - **A long click is a hold of one finger.** Flutter's long press recognizer
   times the first pointer alone and wins the arena when its deadline passes,
   whatever else landed, so two fingers resting on the map before a pinch were

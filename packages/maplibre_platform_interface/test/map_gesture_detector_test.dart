@@ -377,7 +377,8 @@ void main() {
     testWidgets('two fingers held for five seconds still twist', (
       tester,
     ) async {
-      await pumpMap(tester);
+      // The twist starts small, below the default rotation threshold.
+      await pumpMap(tester, gestures: const MapGestures(rotateThreshold: 0));
       Offset arm(double angle) => Offset(cos(angle), sin(angle)) * 50;
       Future<void> twist(Duration hold) async {
         final a = await tester.startGesture(_center - arm(0));
@@ -898,6 +899,73 @@ void main() {
       await pumpMap(tester);
       await twist(tester);
       expect(camera.rotated, isNot(0));
+    });
+
+    /// Twists two fingers 100 px apart by [degrees] clockwise in 20 steps,
+    /// spreading them to [spread] px apart.
+    Future<void> twistBy(
+      WidgetTester tester,
+      double degrees, {
+      double spread = 100,
+    }) async {
+      Offset arm(double angle, double length) =>
+          Offset(cos(angle), sin(angle)) * length / 2;
+      final a = await tester.startGesture(_center - arm(0, 100));
+      final b = await tester.startGesture(_center + arm(0, 100));
+      for (var i = 1; i <= 20; i++) {
+        final angle = degrees * pi / 180 * i / 20;
+        final length = 100 + (spread - 100) * i / 20;
+        await a.moveTo(_center - arm(angle, length));
+        await b.moveTo(_center + arm(angle, length));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a pinch twisted less than the threshold only zooms', (
+      tester,
+    ) async {
+      await pumpMap(tester);
+      await twistBy(tester, 10, spread: 200);
+      expect(camera.zoomed, greaterThan(0.5));
+      expect(camera.rotated, 0);
+      expect(camera.endVelocity!.rotate, 0);
+    });
+
+    testWidgets('a twist rotates once it passes the threshold', (tester) async {
+      await pumpMap(tester, gestures: const MapGestures(rotateThreshold: 0));
+      await twistBy(tester, 60);
+      final immediate = camera.rotated;
+      // A clockwise twist lowers the bearing. Flutter drops the twist before
+      // it claims the fingers for the pinch.
+      expect(immediate, lessThan(-30));
+      camera.updates.clear();
+      await pumpMap(tester);
+      await twistBy(tester, 60);
+      // The twist below the default 15 degrees is dropped, except for the
+      // 3 degree step that passes it.
+      expect(
+        camera.rotated - immediate,
+        inInclusiveRange(12 - 1e-9, 15 + 1e-9),
+      );
+    });
+
+    testWidgets('a twist below a raised threshold does not rotate', (
+      tester,
+    ) async {
+      await pumpMap(tester, gestures: const MapGestures(rotateThreshold: 45));
+      await twistBy(tester, 40);
+      expect(camera.rotated, 0);
+    });
+
+    testWidgets('a twist rotates right away without a threshold', (
+      tester,
+    ) async {
+      await pumpMap(tester, gestures: const MapGestures(rotateThreshold: 0));
+      await twistBy(tester, 10, spread: 200);
+      expect(camera.rotated, lessThan(0));
     });
 
     testWidgets('a pinch zooms but does not rotate while rotation is off', (

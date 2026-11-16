@@ -24,7 +24,8 @@ class MapGestures {
     this.doubleTapDrag = true,
     this.secondaryDrag = true,
     this.twoFingerDrag = true,
-  });
+    this.rotateThreshold = 15,
+  }) : assert(rotateThreshold >= 0, 'rotateThreshold must not be negative');
 
   /// Turns every gesture off by default.
   ///
@@ -38,7 +39,8 @@ class MapGestures {
     this.doubleTapDrag = false,
     this.secondaryDrag = false,
     this.twoFingerDrag = false,
-  });
+    this.rotateThreshold = 15,
+  }) : assert(rotateThreshold >= 0, 'rotateThreshold must not be negative');
 
   /// Drag one finger or the mouse to pan.
   final bool drag;
@@ -67,6 +69,12 @@ class MapGestures {
   /// Drag two fingers side by side up or down to tilt.
   final bool twoFingerDrag;
 
+  /// Degrees that two fingers of a [pinch] twist before it rotates the map,
+  /// so that a pinch that only zooms or pans doesn't turn the map by
+  /// accident. Once the twist passes it, the map turns with the fingers until
+  /// they lift. 0 rotates right away.
+  final double rotateThreshold;
+
   /// A copy with the given gestures replaced.
   MapGestures copyWith({
     bool? drag,
@@ -77,6 +85,7 @@ class MapGestures {
     bool? doubleTapDrag,
     bool? secondaryDrag,
     bool? twoFingerDrag,
+    double? rotateThreshold,
   }) => MapGestures(
     drag: drag ?? this.drag,
     fling: fling ?? this.fling,
@@ -86,6 +95,7 @@ class MapGestures {
     doubleTapDrag: doubleTapDrag ?? this.doubleTapDrag,
     secondaryDrag: secondaryDrag ?? this.secondaryDrag,
     twoFingerDrag: twoFingerDrag ?? this.twoFingerDrag,
+    rotateThreshold: rotateThreshold ?? this.rotateThreshold,
   );
 
   @override
@@ -99,7 +109,8 @@ class MapGestures {
           doubleTap == other.doubleTap &&
           doubleTapDrag == other.doubleTapDrag &&
           secondaryDrag == other.secondaryDrag &&
-          twoFingerDrag == other.twoFingerDrag;
+          twoFingerDrag == other.twoFingerDrag &&
+          rotateThreshold == other.rotateThreshold;
 
   @override
   int get hashCode => Object.hash(
@@ -111,6 +122,7 @@ class MapGestures {
     doubleTapDrag,
     secondaryDrag,
     twoFingerDrag,
+    rotateThreshold,
   );
 
   @override
@@ -118,5 +130,5 @@ class MapGestures {
       'MapGestures(drag: $drag, fling: $fling, pinch: $pinch, '
       'scrollWheel: $scrollWheel, doubleTap: $doubleTap, '
       'doubleTapDrag: $doubleTapDrag, secondaryDrag: $secondaryDrag, '
-      'twoFingerDrag: $twoFingerDrag)';
+      'twoFingerDrag: $twoFingerDrag, rotateThreshold: $rotateThreshold)';
 }

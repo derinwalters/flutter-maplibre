@@ -134,6 +134,11 @@ options decide what they do, and everything is on by default:
 | `secondaryDrag` | Drag with the right mouse button or Ctrl + left button        | rotate, pitch     |
 | `twoFingerDrag` | Drag two fingers side by side up or down                      | pitch             |
 
+A pinch rotates the map only once its fingers twist more than
+`MapGestures.rotateThreshold`, 15 degrees by default, so that zooming and
+panning with two fingers doesn't turn the map by accident. Set it to 0 to
+rotate right away.
+
 ```dart
 MapOptions(
   // No tilting and no rotating.

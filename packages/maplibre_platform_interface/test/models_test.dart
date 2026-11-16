@@ -386,6 +386,16 @@ void main() {
       expect(a, isNot(const MapGestures()));
       expect(a.toString(), contains('scrollWheel: false'));
     });
+
+    test('waits for a 15 degree twist before rotating by default', () {
+      expect(const MapGestures().rotateThreshold, 15);
+      expect(const MapGestures.none().rotateThreshold, 15);
+      final a = const MapGestures().copyWith(rotateThreshold: 0);
+      expect(a.rotateThreshold, 0);
+      expect(a, isNot(const MapGestures()));
+      expect(a, const MapGestures(rotateThreshold: 0));
+      expect(a.toString(), contains('rotateThreshold: 0'));
+    });
   });
 
   group('MapMovements', () {

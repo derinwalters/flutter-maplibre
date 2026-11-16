@@ -144,9 +144,11 @@ void runTests() {
       await a.up(timeStamp: time);
       await b.up(timeStamp: time);
 
-      // Past what the fingers did themselves.
+      // Past what the fingers did themselves, less the twist below the
+      // rotation threshold.
       final pinched = steps * log(grow) / ln2;
-      const twisted = steps * turn * 180 / pi;
+      final twisted =
+          steps * turn * 180 / pi - const MapGestures().rotateThreshold;
       final flung = await map.waitForCamera(
         (camera) =>
             camera.zoom > before.zoom + pinched + 0.2 &&
