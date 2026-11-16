@@ -51,6 +51,9 @@
   never trail the camera and lie flat on a tilted map. Its style can hide the
   accuracy and the heading or replace the dot with an icon, `anchor` places
   it among the layers of the style, and `onClick` reports taps on it.
+- A map releases its GPU memory and texture while it is paused or the app is
+  hidden, so iOS can freeze a backgrounded app instead of terminating it; not
+  on web.
 
 ### Bug Fixes
 

@@ -214,6 +214,10 @@ MapLibreMap(
 )
 ```
 
+While paused, and while the app is hidden, a map also releases its GPU memory
+and its texture, and renders into new ones when it resumes, so iOS can freeze
+a backgrounded app instead of terminating it.
+
 `MapController.isRenderingPaused` and the `onRenderingChanged` callback tell
 whether the map renders. On web, the browser already skips hidden maps, so
 `paused` has no effect there.

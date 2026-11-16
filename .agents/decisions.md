@@ -72,6 +72,21 @@ Each entry: the decision, then why.
   the external memory extensions the GPU has. On Linux the plugin allocates
   its ring images on it through the functions of its context.
 
+- **A map sleeps while it is paused or the app is hidden.**
+  `MapRenderer.setAsleep` releases the render session, which frees the
+  renderer's GPU memory, and the target gives up its texture; the map keeps
+  its style, sources and camera, and a new session attaches under a new
+  texture id when it wakes. Sleep is a wanted state that the renderer
+  settles to on its GPU queue, so the last call wins however queued
+  transitions interleave. iOS freezes a suspended app, which keeps it from
+  being terminated for memory, only while its dirty shared memory stays under
+  a small cap (`vm_map_freeze`, about 76 MB on a 6 GB iPhone), and a map's GPU
+  memory and texture are all shared: one paused map left a backgrounded app at
+  162.6 MB shared, 104 MB of it the renderer's (0.4.0-pre.1, plugin-allocated
+  ring; not measured again on the library's ring). On iOS and macOS the target
+  unregisters its texture, as Flutter keeps every surface it sampled while it
+  is registered; the other targets keep theirs.
+
 ## Windows
 
 - **The session renders into the library's ring of three DXGI shared
