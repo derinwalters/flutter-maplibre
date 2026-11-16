@@ -6,7 +6,8 @@ import 'package:maplibre_native_ffi/maplibre_native_ffi.dart';
 /// core worker through Metal into a ring of BGRA8 IOSurfaces that the C
 /// library allocates. Flutter samples the surface of the frame on screen
 /// directly, without a copy. Its session draws CJK ideographs, kana and
-/// Hangul with the fonts of [localIdeographFontFamily], when set.
+/// Hangul with the fonts of [localIdeographFontFamily], or the style's
+/// glyphs when it is null.
 FrameTarget createDarwinTarget(
   LogicalExtent extent, {
   String? localIdeographFontFamily,
@@ -27,16 +28,15 @@ final class _IoSurfaceRingTarget extends LibraryRingTarget {
 
   /// The C library creates the session's renderer, whose local glyph
   /// rasterizer reads its fonts, after the session attaches, so they are set
-  /// just before.
+  /// just before, on every attach: the fonts are the process's, and a map
+  /// without them must not draw with another map's.
   @override
   RenderSessionHandle attach(
     MapHandle map,
     LogicalExtent extent,
     Wake frameWake,
   ) {
-    if (_localIdeographFontFamily case final fontFamily?) {
-      DarwinPlugin.setLocalIdeographFonts(fontFamily);
-    }
+    DarwinPlugin.setLocalIdeographFonts(_localIdeographFontFamily);
     return map.attachIoSurfaceRing(
       IoSurfaceRingDescriptor(
         logicalSize: logicalSize(extent),

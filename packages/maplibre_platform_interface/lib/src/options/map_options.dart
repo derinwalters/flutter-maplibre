@@ -23,7 +23,7 @@ class MapOptions {
     this.movements = const MapMovements(),
     this.gestures = const MapGestures(),
     this.fastPforEnabled = false,
-    this.localIdeographFontFamily,
+    this.localIdeographFontFamily = 'sans-serif',
   });
 
   /// Find the [MapOptions] of the closest [MapLibreMap] in the widget tree.
@@ -96,20 +96,22 @@ class MapOptions {
   /// instead of the style's glyphs, as a CSS font-family list such as
   /// `"'Hiragino Sans', sans-serif"`. The map then downloads only the glyph
   /// ranges of other scripts, and shows CJK labels without waiting for them.
+  ///
+  /// Defaults to `'sans-serif'`. Null, or a list without names such as an
+  /// empty string, draws the style's glyphs.
+  ///
   /// On iOS and macOS, `sans-serif`, `system-ui`, `ui-sans-serif` and
   /// `-apple-system` name the system font, whose fallbacks pick the CJK face
   /// of the device's language, and a font of the layer's `text-font` that
-  /// the device has comes first.
-  ///
-  /// Null, the default, keeps the platform's own: web draws these characters
-  /// with the browser's `sans-serif` font, iOS and macOS with the style's
-  /// glyphs. An empty string draws the style's glyphs.
+  /// the device has comes first. Other names reach Core Text as they are, so
+  /// a generic family such as `serif` or `monospace` matches no font and the
+  /// next name, or Core Text's own fallback, draws.
   ///
   /// Only on iOS, macOS and web; the other platforms draw the style's glyphs.
   /// Read once, when the map is created. On iOS and macOS the fonts are the
-  /// app's, not the map's: a map created later without them, or with an
-  /// empty string, draws with them too, and maps created at the same time
-  /// with different fonts may draw with each other's.
+  /// app's, set by each map as it is created and read at its first frame, so
+  /// a map created with different fonts before another map's first frame may
+  /// give that map its fonts.
   final String? localIdeographFontFamily;
 
   @override

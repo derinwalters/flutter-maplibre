@@ -39,6 +39,13 @@ void main() {
       ]);
     });
 
+    test('unescapes unquoted names', () {
+      expect(fontFamilyNames(r'Hiragino\ Sans, A\,B'), [
+        'Hiragino Sans',
+        'A,B',
+      ]);
+    });
+
     test('keeps every name on a line of its own', () {
       expect(fontFamilyNames("'Noto\nSans'"), ['Noto Sans']);
     });

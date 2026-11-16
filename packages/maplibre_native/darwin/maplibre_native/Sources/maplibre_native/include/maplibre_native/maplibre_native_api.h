@@ -65,7 +65,8 @@ void maplibre_native_dispose_texture(int64_t engine_id, int64_t texture_id);
 // `ui-sans-serif` and `-apple-system` name the system font. The rasterizer
 // reads its fonts from the `MLNIdeographicFontFamilyName` user default alone,
 // which this registers for the process. A NULL |font_names|, or one without
-// names, keeps the fonts registered before. Safe to call from any thread.
+// names, turns the rasterizer off: those sessions draw the style's glyphs.
+// Safe to call from any thread.
 void maplibre_native_set_local_ideograph_fonts(const char* font_names);
 
 #if defined(__cplusplus)

@@ -194,18 +194,25 @@ void main() {
       expect(const MapOptions().fastPforEnabled, isFalse);
     });
 
-    test('keeps the platform fonts for CJK by default', () {
-      expect(const MapOptions().localIdeographFontFamily, isNull);
+    test('draws CJK with the device fonts by default, as gl-js', () {
+      expect(const MapOptions().localIdeographFontFamily, 'sans-serif');
     });
 
     test('compares the local ideograph fonts', () {
-      const local = MapOptions(localIdeographFontFamily: 'sans-serif');
-      expect(local, const MapOptions(localIdeographFontFamily: 'sans-serif'));
+      const local = MapOptions(localIdeographFontFamily: 'Hiragino Sans');
+      expect(
+        local,
+        const MapOptions(localIdeographFontFamily: 'Hiragino Sans'),
+      );
       expect(
         local.hashCode,
-        const MapOptions(localIdeographFontFamily: 'sans-serif').hashCode,
+        const MapOptions(localIdeographFontFamily: 'Hiragino Sans').hashCode,
       );
       expect(local, isNot(const MapOptions()));
+      expect(
+        const MapOptions(localIdeographFontFamily: null),
+        isNot(const MapOptions()),
+      );
       expect(local, isNot(const MapOptions(localIdeographFontFamily: 'serif')));
     });
   });

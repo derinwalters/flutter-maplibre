@@ -23,6 +23,10 @@ import 'package:web/web.dart' hide PointerEvent;
 
 part 'style_controller.dart';
 
+/// Matches a CSS font-family list without names: only commas, quotes and
+/// whitespace.
+final _noFontNames = RegExp(r'''^[\s,'"]*$''');
+
 /// The web specific implementation of the [MapLibreMap] widget.
 final class MapLibreMapStateWeb extends MapLibreMapState {
   late HTMLDivElement _htmlElement;
@@ -101,11 +105,13 @@ final class MapLibreMapStateWeb extends MapLibreMapState {
         interactive: false,
         transformRequest: _transformRequest.toJS,
       );
-      // Left out, gl-js keeps its own default, `sans-serif`; an empty string
-      // draws the style's glyphs.
-      if (options.localIdeographFontFamily case final fontFamily?) {
-        mapOptions.localIdeographFontFamily = fontFamily.trim();
-      }
+      // gl-js draws the style's glyphs for `false`. A list without names,
+      // such as `''`, would otherwise turn local drawing on with no font.
+      final fontFamily = options.localIdeographFontFamily?.trim();
+      mapOptions.localIdeographFontFamily =
+          fontFamily == null || _noFontNames.hasMatch(fontFamily)
+          ? false.toJS
+          : fontFamily.toJS;
       _map = interop.JsMap(mapOptions);
       _mapCreated = true;
 

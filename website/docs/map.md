@@ -38,7 +38,7 @@ MapLibreMap(
 | `movements`             | What the user may change, see [Gestures](#gestures).                            |
 | `gestures`              | Which gestures move the map, see [Gestures](#gestures).                         |
 | `fastPforEnabled`       | Decode MLT tiles that use FastPFOR, see [Sources](sources/tiles.md#maplibre-tiles-mlt). Only read once. Always on for web. |
-| `localIdeographFontFamily` | Draw CJK ideographs, kana and Hangul with the device's fonts, a CSS font-family list such as `'sans-serif'`, instead of downloading the style's glyphs. Only read once. Only on iOS, macOS and web. |
+| `localIdeographFontFamily` | Draw CJK ideographs, kana and Hangul with the device's fonts, a CSS font-family list, instead of downloading the style's glyphs. Defaults to `'sans-serif'`; `null` draws the style's glyphs. Only read once. Only on iOS, macOS and web. |
 
 ## Initial camera
 

@@ -110,10 +110,10 @@ final class DarwinPlugin {
 
   /// Has the render sessions that attach from now on draw CJK ideographs,
   /// kana and Hangul with the fonts of the CSS font-family list [fontFamily],
-  /// see `MapOptions.localIdeographFontFamily`. A list without names keeps
-  /// the fonts set before.
-  static void setLocalIdeographFonts(String fontFamily) => using((arena) {
-    final names = fontFamilyNames(fontFamily).join('\n');
+  /// see `MapOptions.localIdeographFontFamily`. Null, or a list without
+  /// names, has them draw the style's glyphs.
+  static void setLocalIdeographFonts(String? fontFamily) => using((arena) {
+    final names = fontFamilyNames(fontFamily ?? '').join('\n');
     _bindings.maplibre_native_set_local_ideograph_fonts(
       names.toNativeUtf8(allocator: arena).cast(),
     );
@@ -123,43 +123,53 @@ final class DarwinPlugin {
 }
 
 /// The font and family names of the CSS font-family list [fontFamily], in
-/// order. Quoted names lose their quotes and backslash escapes, and keep
-/// their commas; the whitespace in unquoted names collapses to one space, as
-/// in CSS. Empty names are left out.
+/// order. Names lose their quotes and backslash escapes, and quoted names
+/// keep their commas; the whitespace in unquoted names collapses to one
+/// space, as in CSS. Empty names are left out.
 @visibleForTesting
 List<String> fontFamilyNames(String fontFamily) {
   final names = <String>[];
   final name = StringBuffer();
   String? quote;
   var escaped = false;
+  var space = false;
   void take() {
     // The names reach the plugin one per line.
     final value = name.toString().replaceAll(RegExp('[\r\n]'), ' ').trim();
     if (value.isNotEmpty) names.add(value);
     name.clear();
+    space = false;
+  }
+
+  void write(String char) {
+    // A run of whitespace in an unquoted name is one space, trimmed at the
+    // ends by take.
+    if (space && name.isNotEmpty) name.write(' ');
+    space = false;
+    name.write(char);
   }
 
   for (final char in fontFamily.split('')) {
-    if (quote != null) {
-      if (escaped) {
-        escaped = false;
-        name.write(char);
-      } else if (char == r'\') {
-        escaped = true;
-      } else if (char == quote) {
+    if (escaped) {
+      escaped = false;
+      write(char);
+    } else if (char == r'\') {
+      escaped = true;
+    } else if (quote != null) {
+      if (char == quote) {
         quote = null;
       } else {
         name.write(char);
       }
     } else if (char == '"' || char == "'") {
+      write('');
       quote = char;
     } else if (char == ',') {
       take();
     } else if (char.trim().isEmpty) {
-      // A run of whitespace is one space, trimmed at the ends by take.
-      if (name.isNotEmpty && !name.toString().endsWith(' ')) name.write(' ');
+      space = true;
     } else {
-      name.write(char);
+      write(char);
     }
   }
   take();

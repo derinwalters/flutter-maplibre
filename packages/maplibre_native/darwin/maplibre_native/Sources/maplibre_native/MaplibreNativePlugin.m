@@ -353,9 +353,8 @@ static BOOL IsSystemFamily(NSString *name) {
 }
 
 void maplibre_native_set_local_ideograph_fonts(const char *font_names) {
-  if (font_names == NULL) return;
-  NSString *list = [NSString stringWithUTF8String:font_names];
   NSMutableArray<NSString *> *names = [NSMutableArray array];
+  NSString *list = font_names == NULL ? nil : [NSString stringWithUTF8String:font_names];
   for (NSString *line in [list componentsSeparatedByString:@"\n"]) {
     NSString *name =
         [line stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
@@ -363,10 +362,12 @@ void maplibre_native_set_local_ideograph_fonts(const char *font_names) {
     NSString *font = IsSystemFamily(name) ? SystemFontFamilyName() : name;
     if (font != nil) [names addObject:font];
   }
-  // No names keep the fonts registered before, if any.
-  if (names.count == 0) return;
-  // The registration domain lives as long as the process and is never written
-  // to the app's preferences on disk. NSUserDefaults is thread-safe.
+  // The rasterizer reads the key with -stringArrayForKey: and is on whenever
+  // that returns an array, even an empty one, so a value that is not a string
+  // array, @NO, turns it off. The registration domain lives as long as the
+  // process and is never written to the app's preferences on disk.
+  // NSUserDefaults is thread-safe.
+  id value = names.count > 0 ? names : @NO;
   [NSUserDefaults.standardUserDefaults
-      registerDefaults:@{@"MLNIdeographicFontFamilyName" : names}];
+      registerDefaults:@{@"MLNIdeographicFontFamilyName" : value}];
 }

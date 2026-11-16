@@ -150,14 +150,14 @@ final class MapRenderer implements FrameTargetHost {
   /// Creates a renderer of [extent] whose map queues the events of
   /// [eventMask], decodes FastPFOR in MLT tiles if [fastPforEnabled] and
   /// draws CJK ideographs, kana and Hangul with [localIdeographFontFamily]
-  /// where the platform can. [setUp] submits the map's first commands, such
+  /// where the platform can, or the style's glyphs when it is null. [setUp] submits the map's first commands, such
   /// as its camera and style, which the map runs once it is created and
   /// before the session renders its first frame.
   static Future<MapRenderer> create({
     required LogicalExtent extent,
+    required String? localIdeographFontFamily,
     RuntimeEventFlag? eventMask,
     bool fastPforEnabled = false,
-    String? localIdeographFontFamily,
     Future<void> Function(MapHandle map)? setUp,
     void Function(RuntimeEvent event)? onEvent,
     void Function(MapProjectionHandle projection, RenderFrameResult frame)?

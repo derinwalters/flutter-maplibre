@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:maplibre_native/src/map_renderer.dart';
 import 'package:maplibre_native_ffi/maplibre_native_ffi.dart';
+import 'package:maplibre_platform_interface/maplibre_platform_interface.dart'
+    as platform
+    show MapOptions;
 
 /// Shows a MapLibre map rendered by MapLibre Native into a Flutter texture.
 class MapLibreNativeView extends StatefulWidget {
@@ -50,6 +53,8 @@ class _MapLibreNativeViewState extends State<MapLibreNativeView> {
     _creating =
         MapRenderer.create(
           extent: extent,
+          localIdeographFontFamily:
+              const platform.MapOptions().localIdeographFontFamily,
           setUp: (map) => map.setStyleUrl(styleUrl),
         )..then(
           (renderer) {

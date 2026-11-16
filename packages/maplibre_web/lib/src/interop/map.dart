@@ -194,9 +194,10 @@ extension type MapOptions._(JSObject _) implements JSObject {
   });
 
   /// The CSS font-family list that draws CJK ideographs, kana and Hangul
-  /// locally; gl-js defaults to `sans-serif`.
-  external String? get localIdeographFontFamily;
-  external set localIdeographFontFamily(String? value);
+  /// locally, or `false` or an empty string for the style's glyphs; gl-js
+  /// defaults to `sans-serif`.
+  external JSAny? get localIdeographFontFamily;
+  external set localIdeographFontFamily(JSAny? value);
 }
 
 /// The request that a `transformRequest` callback returns.

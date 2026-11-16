@@ -29,9 +29,9 @@ class LocalCjkFontsPage extends StatelessWidget {
                   center: Geographic(lon: 139.767, lat: 35.681),
                   zoom: 13,
                 ),
-                // The fonts belong to the process on iOS and macOS, so the
-                // page has no switch to turn them off.
-                localIdeographFontFamily: 'sans-serif',
+                // The default, 'sans-serif', also draws with the device's
+                // fonts; null draws the style's glyphs.
+                localIdeographFontFamily: "'Hiragino Sans', sans-serif",
               ),
               children: const [
                 MapScalebar(),
